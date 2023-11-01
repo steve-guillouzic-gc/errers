@@ -1,0 +1,68 @@
+# SPDX-FileCopyrightText: 2023 His Majesty the King in Right of Canada, as represented by the Minister of National Defence
+#
+# SPDX-License-Identifier: LicenseRef-MIT-DND
+#
+# This file is part of the ERRERS package.
+
+[build-system]
+requires = ['setuptools>=61.0', 'wheel', 'trove-classifiers']
+build-backend = 'setuptools.build_meta'
+
+[project]
+name = 'errers'
+description = 'ERRERS: Enhanced Review of Reports via Extraction using Rule-based Substitutions'
+requires-python = '>=3.6'
+keywords = ['LaTeX', 'grammar', 'spelling', 'regular expression']
+authors = [
+    {name = 'Steve Guillouzic, Defence Research and Development Canada', email = 'steve.guillouzic@forces.gc.ca'}
+]
+classifiers = [
+    'Development Status :: 5 - Production/Stable',
+    'Environment :: Console',
+    'Environment :: MacOS X',
+    'Environment :: Win32 (MS Windows)',
+    'Environment :: X11 Applications',
+    'Intended Audience :: Science/Research',
+    'License :: OSI Approved :: MIT License',
+    'Natural Language :: English',
+    'Operating System :: OS Independent',
+    'Programming Language :: Python :: 3',
+    'Programming Language :: Python :: 3.6',
+    'Programming Language :: Python :: 3.7',
+    'Programming Language :: Python :: 3.8',
+    'Programming Language :: Python :: 3.9',
+    'Programming Language :: Python :: 3.10',
+    'Programming Language :: Python :: 3.11',
+    'Programming Language :: Python :: 3.12',
+    'Programming Language :: Python :: 3 :: Only',
+    'Programming Language :: Python :: Implementation :: CPython',
+    'Topic :: Text Processing :: Filters',
+    'Topic :: Text Processing :: Markup :: LaTeX'
+]
+dependencies = [
+    'regex',
+    'pywin32<=305; platform_system=="Windows" and python_version<"3.8"',
+    'pywin32; platform_system=="Windows" and python_version>="3.8"'
+]
+dynamic = ['version', 'readme']
+
+[project.scripts]
+errers = 'errers._cli:run'
+
+[project.urls]
+'User manual' = 'https://cradpdf.drdc-rddc.gc.ca/PDFS/unc372/p813656_A1b.pdf'
+'Change log' = 'https://github.com/steve-guillouzic-gc/errers/blob/main/CHANGELOG.rst'
+'Bug tracker' = 'https://github.com/steve-guillouzic-gc/errers/issues'
+'Source code' = 'https://github.com/steve-guillouzic-gc/errers'
+'Contribution guidelines' = 'https://github.com/steve-guillouzic-gc/errers/blob/main/CONTRIBUTING.rst'
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+namespaces = true
+where = ['src']
+
+[tool.setuptools.dynamic]
+version = {attr = 'errers.__version__'}
+readme = {file = ['README.rst'], content-type='text/x-rst'}

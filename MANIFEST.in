@@ -1,0 +1,14 @@
+# SPDX-FileCopyrightText: 2023 His Majesty the King in Right of Canada, as represented by the Minister of National Defence
+#
+# SPDX-License-Identifier: LicenseRef-MIT-DND
+#
+# This file is part of the ERRERS package.
+
+include CHANGELOG.rst
+include CONTRIBUTING.rst
+include LICENSES/*
+include bundle/*
+include src/errers/icon/*.ico
+include src/errers/icon/*.icns
+include src/errers/icon/*.png
+exclude src/errers/rules/local.py
