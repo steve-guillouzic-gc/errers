@@ -1,5 +1,5 @@
 ..
-   SPDX-FileCopyrightText: 2023 His Majesty the King in Right of Canada, as represented by the Minister of National Defence
+   SPDX-FileCopyrightText: 2023 His Majesty in Right of Canada
 
    SPDX-License-Identifier: LicenseRef-MIT-DND
 
@@ -8,6 +8,13 @@
 ==================
 ERRERS: Change Log
 ==================
+
+3.1.1, unreleased
+=================
+
+Changed
+-------
+- Shorten copyright notice
 
 3.1, 2023-11-01
 ===============
