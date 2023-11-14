@@ -12,6 +12,10 @@ ERRERS: Change Log
 3.1.1, unreleased
 =================
 
+Changed
+-------
+- Mention GitHub releases in README file.
+
 Fixed
 -----
 - Shorten copyright notice.

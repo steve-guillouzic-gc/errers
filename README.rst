@@ -98,6 +98,10 @@ packages cannot be installed, the installation can be forced by using option
 be slower. Without pywin32 on Windows, shortcut creation will not be available,
 and the "Check" button will be missing.
 
+Installation files can also be downloaded from
+https://github.com/steve-guillouzic-gc/errers/releases, where pre-release
+versions will also be made available.
+
 Local network administrators may offer other methods of installing ERRERS. For
 instance, the ERRERS source code is distributed with a script that bundles it
 into a standalone Windows application that does not require Python. This is not
