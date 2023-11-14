@@ -14,7 +14,8 @@ ERRERS: Change Log
 
 Changed
 -------
-- Shorten copyright notice
+- Shorten copyright notice.
+- Remove "v" prefix, if present, when extracting version number from Git tag.
 
 3.1, 2023-11-01
 ===============
