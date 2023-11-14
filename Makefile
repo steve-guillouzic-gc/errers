@@ -69,13 +69,21 @@ endef
 
 default: build
 
+FORCE:
+
 LICENSES.txt: $(files)
 	reuse lint || (echo 'Creation of SPDX file interrupted.' && exit 1)
 	reuse spdx >LICENSES.txt
 
-src/errers/_version.py: $(files)
-	cp templates/_version.py src/errers
-	sed -i -e "s/VERSION/'$(version_python)'/" src/errers/_version.py
+# Force update of version file if new commit
+commit-hash.txt: FORCE
+ifneq ($(file <commit-hash.txt),$(shell git rev-parse HEAD))
+	git rev-parse HEAD >$@
+endif
+
+src/errers/_version.py: $(files) commit-hash.txt
+	cp templates/_version.py $@
+	sed -i -e "s/VERSION/'$(version_python)'/" $@
 
 archive: $(files)
 	zip errers-$(version_python)-archive.zip `git ls-files`
@@ -96,6 +104,7 @@ clean:
 	rm -rf venv
 	rm -rf `find . -name __pycache__`
 	rm -rf LICENSES.txt src/errers.egg-info
+	rm -rf commit-hash.txt
 
 help:
 	$(info $(HELP))

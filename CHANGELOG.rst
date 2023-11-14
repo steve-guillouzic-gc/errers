@@ -15,8 +15,8 @@ ERRERS: Change Log
 Fixed
 -----
 - Shorten copyright notice.
-- Remove "v" prefix, if present, when extracting version number from Git tag.
-- Delete .tar.gz source file after creating ZIP file.
+- Fix bugs in determination of ERRERS version number from Git repository.
+- Retain ZIP file as single source file. (Remove .tar.gz file.)
 - Minor changes to README file.
 
 3.1, 2023-11-01

@@ -25,6 +25,9 @@ __pycache__/
 # License compilation
 /LICENSES.txt
 
+# Hash file (used to determine if version file must be updated)
+commit-hash.txt
+
 # Version file
 /src/errers/_version.py
 
