@@ -12,16 +12,12 @@ ERRERS: Change Log
 3.1.1, unreleased
 =================
 
-Changed
--------
-- Mention GitHub releases in README file.
-
 Fixed
 -----
 - Shorten copyright notice.
 - Remove "v" prefix, if present, when extracting version number from Git tag.
 - Delete .tar.gz source file after creating ZIP file.
-- Fix typos in License section of README file.
+- Minor changes to README file.
 
 3.1, 2023-11-01
 ===============
