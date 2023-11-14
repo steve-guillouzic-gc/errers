@@ -17,6 +17,7 @@ Fixed
 - Shorten copyright notice.
 - Remove "v" prefix, if present, when extracting version number from Git tag.
 - Delete .tar.gz source file after creating ZIP file.
+- Fix typos in License section of README file.
 
 3.1, 2023-11-01
 ===============

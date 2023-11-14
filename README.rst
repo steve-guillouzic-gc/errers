@@ -214,9 +214,9 @@ The following people contributed to the project:
 - Pierre-Luc Drouin, Joshua Goldman, Fred Ma, and Paul Melchin helped with beta
   testing.
  
-Licenses
-========
+License
+=======
 
 The ERRERS source code is distributed under the MIT license
-(https://spdx.org/licenses/MIT). The LICENSE directory in the source code,
+(https://spdx.org/licenses/MIT). The LICENSES directory in the source code,
 wheel, and source distribution files contains the text of the license.
