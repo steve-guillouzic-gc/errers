@@ -12,10 +12,11 @@ ERRERS: Change Log
 3.1.1, unreleased
 =================
 
-Changed
--------
+Fixed
+-----
 - Shorten copyright notice.
 - Remove "v" prefix, if present, when extracting version number from Git tag.
+- Delete .tar.gz source file after creating ZIP file.
 
 3.1, 2023-11-01
 ===============

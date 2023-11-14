@@ -90,7 +90,7 @@ build: $(files) LICENSES.txt src/errers/_version.py
 	source venv/bin/activate; $(PYTHON) -m build
 	cd dist; tar -xzf $(stem).tar.gz
 	cd dist/$(stem); zip -r ../$(stem).zip .
-	rm -r dist/$(stem)
+	rm -r dist/$(stem) dist/$(stem).tar.gz
 
 clean:
 	rm -rf venv
