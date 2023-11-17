@@ -434,6 +434,7 @@ class _MainWindow:
         Arguments:
             root -- parent widget
         """
+        self.root.update()  # Allow processing focus-out event of timeout field
         self._opt_list.set(self._options.list())
         self.reset()
         self.root.update()
@@ -884,7 +885,7 @@ class _OptionsWindow(tk.Toplevel):
         options = [label for label in checkboxes
                    if getattr(self, label.replace(' ', '')).get()]
         if not self.re.get():
-            options.append('max %i seconds per rule' % self.timeout.get())
+            options.append('max %g seconds per rule' % self.timeout.get())
         return ', '.join(options)
 
 
@@ -1380,9 +1381,9 @@ class _PositiveField:
         frame = ttk.Frame(root)
         self._field = ttk.Entry(
                 frame, textvariable=self._variable, width=width,
-                justify=tk.CENTER, validate='focusout',
-                validatecommand=(root.register(self.validate), '%P'),
-                invalidcommand=(root.register(self.invalid),))
+                justify=tk.CENTER, validate='all',
+                validatecommand=(root.register(self.validate), '%d', '%P'),
+                invalidcommand=(root.register(self.invalid), '%d', '%P', '%s'))
         self._label = ttk.Label(frame, text=text, underline=underline)
         row = root.grid_size()[1]
         frame.grid(row=row, column=0, columnspan=2, padx=5, sticky='we')
@@ -1393,23 +1394,40 @@ class _PositiveField:
             self.enable()
 
     @staticmethod
-    def validate(value):
+    def validate(action, new_value):
         """Validate proposed field value.
 
         Arguments:
-            value -- value entered by user
+            action -- 0: deletion; 1: insertion; -1: focus in/out or change in
+                value of variable
+            new_value -- value entered by user
 
         Returns:
             whether the value is valid
         """
         try:
-            return float(value) > 0
+            if action == '-1':
+                # Strict compliance on focus in/out
+                return float(new_value) > 0
+            # Allow zero while typing
+            return float(new_value) >= 0
         except ValueError:
             return False
 
-    def invalid(self):
-        """Reset invalid value to default."""
-        self._variable.set(self._default)
+    def invalid(self, action, new_value, old_value):
+        """Reset invalid value to default.
+
+        Arguments:
+            action -- 0: deletion; 1: insertion; -1: focus in/out or change in
+                value of variable
+            new_value -- value entered by user
+            old_value -- previous value
+        """
+        reaction = {'0': new_value,      # Deletion: allow
+                    '1': old_value,      # Insertion: forbid
+                    '-1': self._default  # Entry/exit: revert to default
+                    }
+        self._variable.set(reaction[action])
 
     def get(self):
         """Return value of text field."""
