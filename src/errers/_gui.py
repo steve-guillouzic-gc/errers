@@ -434,7 +434,6 @@ class _MainWindow:
         Arguments:
             root -- parent widget
         """
-        self.root.update()  # Allow processing focus-out event of timeout field
         self._opt_list.set(self._options.list())
         self.reset()
         self.root.update()
@@ -864,6 +863,7 @@ class _OptionsWindow(tk.Toplevel):
         # pylint: disable=broad-except
         # Reason: exception logged
         try:
+            self.update()  # Process focus-out event of timeout field if needed
             self._values = [option.get() for option in self._options]
             self.withdraw()
             self.grab_release()
@@ -1384,6 +1384,10 @@ class _PositiveField:
                 justify=tk.CENTER, validate='all',
                 validatecommand=(root.register(self.validate), '%d', '%P'),
                 invalidcommand=(root.register(self.invalid), '%d', '%P', '%s'))
+        # Generate focus-out event when return key is pressed. Otherwise, field
+        # may be left with invalid value.
+        self._field.bind('<Return>',
+                         lambda event: event.widget.tk_focusNext().focus())
         self._label = ttk.Label(frame, text=text, underline=underline)
         row = root.grid_size()[1]
         frame.grid(row=row, column=0, columnspan=2, padx=5, sticky='we')
