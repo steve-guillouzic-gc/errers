@@ -14,6 +14,7 @@ ERRERS: Change Log
 
 Fixed
 -----
+- Eliminate font pixelation in GUI on Windows.
 - Shorten copyright notice.
 - Fix bugs in determination of ERRERS version number from Git repository.
 - Retain ZIP file as single source file. (Remove .tar.gz file.)

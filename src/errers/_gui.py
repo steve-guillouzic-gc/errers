@@ -50,6 +50,7 @@ Functions (internal):
 
 __all__ = ['run']
 
+import ctypes
 import functools as ft
 import logging
 import os
@@ -1875,6 +1876,8 @@ def run(init_inpath=None, *, init_outpattern=_app.OUTPATTERN,
     # pylint: disable=broad-except
     # Reason: exception logged
     _app.set_log_stream(sys.stderr)
+    if platform.system() == 'Windows':
+        ctypes.windll.shcore.SetProcessDpiAwareness(1)
     try:
         root = tk.Tk()
         root.withdraw()
