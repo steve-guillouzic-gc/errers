@@ -19,7 +19,7 @@ Fixed
 - Shorten copyright notice.
 - Fix bugs in determination of ERRERS version number from Git repository.
 - Retain ZIP file as single source file. (Remove .tar.gz file.)
-- Minor changes to README file.
+- Update README files.
 
 3.1, 2023-11-01
 ===============
