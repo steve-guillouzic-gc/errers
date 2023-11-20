@@ -51,6 +51,11 @@ pyinstaller errers.spec --noconfirm --clean
 REM Deactivate virtual environment
 call deactivate
 
-REM Keep window open until user presses a key if launched by double-clicking
+REM Keep window open until user presses a key if launched by double-clicking;
+REM then, open the dist folder to make sure the bundle is visible.
 REM Ref: https://stackoverflow.com/questions/5859854/
-if /i %0 equ "%~dpnx0" pause
+if /i %0 equ "%~dpnx0" (
+    echo Bundling done
+    pause
+    start "" dist
+)
