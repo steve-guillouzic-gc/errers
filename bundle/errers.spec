@@ -160,6 +160,12 @@ for msfile in internal_dir.glob('**/mfc*.dll'):
 # Rename distribution directory and create zip file.
 
 origin = pathlib.Path('./dist/errers')
-target = f'./dist/errers-{errers.__version__}-windows'
+target = pathlib.Path(f'./dist/errers-{errers.__version__}-windows')
 shutil.move(errers_dir, target)
 shutil.make_archive(target, 'zip', target)
+
+# Copy README file to dist folder.
+
+origin = pathlib.Path('README.txt')
+target = pathlib.Path('dist')
+shutil.copy(origin, target)
