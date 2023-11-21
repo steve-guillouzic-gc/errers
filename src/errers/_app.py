@@ -146,7 +146,7 @@ def extract_and_save(inpath, *, outpattern, patterns, steps, times, trace,
     # Setup logging
     _set_log_files(misc_path, patterns_path, steps_path, trace_path)
     _set_log_levels(patterns, steps, trace, verbose, re_module.__name__)
-    _misc_logger.info('Input folder: %s', inpath.parent)
+    _misc_logger.info('Input folder: %s', inpath.parent.resolve())
     _misc_logger.info('Output folder: %s', out_path.parent)
     _misc_logger.info('Output file: %s', out_path.name)
     if patterns:
