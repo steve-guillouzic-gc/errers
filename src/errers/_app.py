@@ -21,6 +21,9 @@ Constants: other
     OUTPATTERN -- default pattern for output file name (%i = root: name of
         input file without extension)
 
+Classes:
+    InvalidFilenamePattern -- Invalid pattern for name of output file
+
 Functions:
     extract_and_save -- extract text, and save output and log to file
     set_log_stream -- initialize log stream handler
@@ -66,6 +69,23 @@ _trace_logger = logging.getLogger('errers.trace')
 
 # Other constants
 OUTPATTERN = '%i-err'
+
+
+class InvalidFilenamePattern(Exception):
+    """Invalid pattern for name of output file.
+
+    Methods:
+        __init__: initializer
+    """
+
+    def __init__(self, reason):
+        """Initialize exception.
+
+        Arguments:
+            reason -- reason why pattern is invalid
+        """
+        message = 'Invalid pattern for name of output file: %s.' % reason
+        super().__init__(message)
 
 
 def extract_and_save(inpath, *, outpattern, patterns, steps, times, trace,
@@ -266,4 +286,25 @@ def output_file_root(inpath, outpattern):
         Root of output file as Path object
     """
     outstem = outpattern.replace('%i', inpath.stem)
-    return inpath.parent.joinpath(outstem).resolve()
+    outroot = inpath.parent.joinpath(outstem).resolve()
+    # Check for empty name. (Explicit '.' required if directory name is to be
+    # used as root.)
+    if not outpattern:
+        raise InvalidFilenamePattern('empty name')
+    # Check for invalid characters, such as : or ? on Windows.
+    invalid = ''
+    for char in sorted(set(outstem)):
+        try:
+            Path(char).stat()
+        except FileNotFoundError:
+            pass
+        except OSError:
+            invalid += char
+    if invalid:
+        raise InvalidFilenamePattern('invalid characters (%s)' % invalid)
+    # Check for other empty names, such as '/'.
+    try:
+        outroot.with_name('name')
+    except ValueError:
+        raise InvalidFilenamePattern('empty name')
+    return outroot

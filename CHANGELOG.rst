@@ -16,6 +16,7 @@ Fixed
 -----
 - Eliminate font pixelation in GUI on Windows.
 - Improve validation of timeout value in GUI.
+- Improve validation of pattern for name of output file.
 - Shorten copyright notice.
 - Fix bugs in determination of ERRERS version number from Git repository.
 - Retain ZIP file as single source file. (Remove .tar.gz file.)

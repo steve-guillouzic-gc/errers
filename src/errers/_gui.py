@@ -451,15 +451,21 @@ class _MainWindow:
                                         parent=self.root)
                 self._inpath.set(_CLICK_INPUT_FILE)
                 self._status.set(_FILENAME_REQUIRED)
-            elif not self._outpattern.get():
-                tk.messagebox.showerror(title=errers.SHORTNAME + ' Error',
-                                        message=_INVALID_OUTPUT_FILE,
-                                        parent=self.root)
-                self._status.set(_INVALID_OUTPUT_FILE)
             else:
-                self._interruption = threading.Event()
-                self._extractor = threading.Thread(target=self.run_extraction)
-                self._extractor.start()
+                try:
+                    # Check if pattern for name of output file is valid.
+                    _app.output_file_root(Path(self._inpath.get()),
+                                          self._outpattern.get())
+                except _app.InvalidFilenamePattern as err:
+                    tk.messagebox.showerror(title=errers.SHORTNAME + ' Error',
+                                            message=err,
+                                            parent=self.root)
+                    self._status.set(_INVALID_OUTPUT_FILE)
+                else:
+                    self._interruption = threading.Event()
+                    self._extractor \
+                            = threading.Thread(target=self.run_extraction)
+                    self._extractor.start()
         except Exception:
             _misc_logger.exception(_UNEXPECTED)
 

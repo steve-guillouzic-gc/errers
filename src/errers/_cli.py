@@ -116,7 +116,8 @@ def run():
                     local=args.local,
                     std_re=args.re,
                     timeout=args.timeout)
-        except _engine.base.CatastrophicBacktracking as err:
+        except (_engine.base.CatastrophicBacktracking,
+                _app.InvalidFilenamePattern) as err:
             _misc_logger.error(err)
         except _engine.base.RegularExpressionError:
             _misc_logger.error(
