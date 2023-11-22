@@ -385,6 +385,8 @@ class _MainWindow:
         # pylint: disable=broad-except
         # Reason: exception logged
         try:
+            if self._inpath.locked():
+                return
             initial_path = Path(self._inpath.get())
             if initial_path.is_file():
                 initialfile = initial_path.name
@@ -420,6 +422,8 @@ class _MainWindow:
         # pylint: disable=broad-except
         # Reason: exception logged
         try:
+            if self._inpath.locked():
+                return
             self._options.transient(self.root)
             self._options.deiconify()
             self._options.update_idletasks()
@@ -513,6 +517,9 @@ class _MainWindow:
                             self._btn_main['extract'].config(
                                     text='Extracting', state='disabled',
                                     underline=-1)
+                            self._inpath.lock()
+                            self._outpattern.lock()
+                            self._opt_list.lock()
                             options = self._options
                             self._outname = _app.extract_and_save(
                                     inpath=Path(self._inpath.get()),
@@ -559,6 +566,9 @@ class _MainWindow:
                         self._status.set(self._status.get() + ' (Done)')
                         self._btn_main['copy log'].config(state='normal')
                         self._btn_main['reset'].config(state='normal')
+                        self._inpath.unlock()
+                        self._outpattern.unlock()
+                        self._opt_list.unlock()
                         _app.set_log_stream(self.log)
         except Exception:
             _misc_logger.exception(_UNEXPECTED)
@@ -1273,6 +1283,8 @@ class _TextField:
         get -- return value of text field
         set -- set value of text field
         set_wraplength -- set wrap length to current width
+        unlock -- unlock field
+        lock -- lock field
         focus -- select text and move focus to widget
 
     Attribute:
@@ -1336,6 +1348,18 @@ class _TextField:
     def set_wraplength(self):
         """Set wrap length to current width."""
         self._field.config(wraplength=self._field.winfo_width())
+
+    def unlock(self):
+        """Unlock field."""
+        self._field.configure(state='normal')
+
+    def lock(self):
+        """Lock field."""
+        self._field.configure(state='disable')
+
+    def locked(self):
+        """Is field locked?"""
+        return str(self._field.cget('state')) == 'disable'
 
     def focus(self):
         self._field.select_range(0, 1000)

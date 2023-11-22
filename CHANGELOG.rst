@@ -17,6 +17,7 @@ Fixed
 - Eliminate font pixelation in GUI on Windows.
 - Improve validation of timeout value in GUI.
 - Improve validation of pattern for name of output file.
+- Lock input fields during extraction.
 - Always log full path of input directory.
 - Shorten copyright notice.
 - Fix bugs in determination of ERRERS version number from Git repository.
