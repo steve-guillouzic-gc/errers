@@ -123,10 +123,11 @@ def run():
             _misc_logger.error(
                 'Extraction interrupted by regular expression error.')
         except PermissionError as err:
-            _misc_logger.error('Cannot write to %s. It may be open in another '
-                               'application. If so, please close it and try '
-                               'again.',
-                               Path(err.filename).name)
+            path = Path(err.filename).resolve()
+            _misc_logger.error('Cannot write to %s in %s. It may be open in '
+                               'another application. If so, please close it '
+                               'and try again.',
+                               path.name, path.parent)
         except KeyboardInterrupt:
             _misc_logger.error('Extraction interrupted by user.')
         except Exception:
