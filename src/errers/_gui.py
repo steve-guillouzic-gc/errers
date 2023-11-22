@@ -1362,6 +1362,7 @@ class _TextField:
         return str(self._field.cget('state')) == 'disable'
 
     def focus(self):
+        """Set focus to this field."""
         self._field.select_range(0, 1000)
         self._field.focus_set()
 
@@ -1486,6 +1487,7 @@ class _PositiveField:
         self._label.configure(state='disable')
 
     def focus(self):
+        """Set focus to this field."""
         self._field.select_range(0, 1000)
         self._field.focus_set()
 
