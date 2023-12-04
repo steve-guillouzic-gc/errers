@@ -131,7 +131,7 @@ _DESCRIPTION = [
         while the escape key can be used for "No" and "Cancel"."""),
     "More information in user manual:"
 ]
-_MANUAL = 'https://cradpdf.drdc-rddc.gc.ca/PDFS/unc372/p813656_A1b.pdf'
+_MANUAL = 'https://cradpdf.drdc-rddc.gc.ca/PDFS/unc451/p813656_A1b.pdf'
 _FEEDBACK = 'Questions, comments, and suggestions:'
 _ALTERNATE = 'For those without a GitHub account:'
 _ISSUES = 'github.com/steve-guillouzic-gc/errers/issues'

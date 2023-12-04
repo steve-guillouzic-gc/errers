@@ -220,7 +220,7 @@ def _create_parser():
                 than standalone application, in a local.py file placed in the
                 rules sub-directory of its installation folder. More
                 information in user manual:
-                https://cradpdf.drdc-rddc.gc.ca/PDFS/unc372/p813656_A1b.pdf.
+                https://cradpdf.drdc-rddc.gc.ca/PDFS/unc451/p813656_A1b.pdf.
                 Questions, comments and suggestions:
                 github.com/steve-guillouzic-gc/errers/issues.
                 For those without a GitHub account:
