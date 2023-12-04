@@ -29,7 +29,12 @@ The Python distribution provided by Apple on macOS includes an older version of
 the Tkinter GUI library with which ERRERS is not compatible, but it can still
 be used in command-line mode. To use ERRERS in GUI mode on that platform, an
 alternate version of Python must be installed, such as those available from the
-Python website (https://www.python.org/).
+Python website (https://www.python.org/). On macOS 14, it is preferable to use
+Python 3.12 or more recent, as buttons may become unresponsive with the version
+of Tkinter included in earlier versions. There are two workarounds for the
+unresponsiveness bug if getting Python 3.12 is not an option: the first is to
+use keyboard shortcuts, and the second one is to move the window (which
+reactivates the buttons).
 
 ERRERS depends on two third-party Python packages:
 
