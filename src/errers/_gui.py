@@ -1937,6 +1937,11 @@ def run(init_inpath=None, *, init_outpattern=_app.OUTPATTERN,
         root = tk.Tk()
         root.withdraw()
         _set_icon(root)
+        if platform.system() == 'Darwin':
+            # Set font color of disabled buttons manually to ensure they are
+            # greyed on macOS too.
+            style = ttk.Style()
+            style.map('TButton', foreground=[('disabled', 'gray70')])
         main_window = _MainWindow(root=root,
                                   init_inpath=init_inpath,
                                   init_outpattern=init_outpattern,

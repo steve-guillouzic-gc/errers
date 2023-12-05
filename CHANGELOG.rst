@@ -15,6 +15,7 @@ ERRERS: Change Log
 Fixed
 -----
 - Eliminate font pixelation in GUI on Windows.
+- Make disabling of buttons more apparent on macOS.
 - Improve validation of timeout value in GUI.
 - Improve validation of pattern for name of output file.
 - Lock input fields during extraction.
