@@ -21,6 +21,7 @@ Fixed
 - Lock input fields during extraction.
 - Always log full path of input directory.
 - Report location of files that are not writable.
+- Catch and report on file encoding mismatch.
 - Shorten copyright notice.
 - Fix bugs in determination of ERRERS version number from Git repository.
 - Retain ZIP file as single source file. (Remove .tar.gz file.)

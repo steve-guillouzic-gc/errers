@@ -545,7 +545,8 @@ class _MainWindow:
                             self._btn_main['extract'].config(
                                     text='Error', underline=-1)
                             raise
-                    except _engine.base.CatastrophicBacktracking as err:
+                    except (_engine.extractor.EncodingError,
+                            _engine.base.CatastrophicBacktracking) as err:
                         _misc_logger.error(err)
                     except _engine.base.RegularExpressionError:
                         _misc_logger.error('Extraction interrupted by '

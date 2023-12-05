@@ -22,6 +22,10 @@ Constants:
 Metaclasses:
     MetaDocument -- read-only interface to content of a LaTeX document
 
+Classes:
+    EncodingError -- mismatch between file content and declared or implicit
+        encoding
+
 Function:
     extract -- extract text from LaTeX file
 
@@ -327,6 +331,8 @@ class MetaDocument:
         except FileNotFoundError:
             _misc_logger.error('Missing file: %s', relative_path)
             return ''
+        except UnicodeDecodeError as err:
+            raise EncodingError(relative_path, err)
         if location_rules:
             content = location_rules.sub(content, file_name=file_path.name)
         return content
@@ -461,6 +467,29 @@ class MetaDocument:
                     _misc_logger.warning("'r' prefix missing in document rule "
                                          "at line %d: %s", line, rule)
         return rlists
+
+
+class EncodingError(Exception):
+    """Mismatch between file content and declared or implicit encoding
+
+    Methods:
+        __init__: initializer
+    """
+
+    def __init__(self, file, error):
+        """Initialize exception.
+
+        Arguments:
+            file -- faulty input file
+            error -- encoding error
+        """
+        message = textwrap.fill(textwrap.dedent("""\
+                  Content of file %s does not match declared or implicit
+                  encoding. More precisely, %s. Files are assumed to be encoded
+                  as UTF-8 unless declared otherwise using
+                  \\usepackage[CODEC]{inputenc} in main LaTeX file, where CODEC
+                  is the desired encoding.""" % (file, error)), width=1000)
+        super().__init__(message)
 
 
 def extract(latex_doc, re_module, *, auto=True, default=True, local=True,
