@@ -33,3 +33,6 @@ commit-hash.txt
 
 # Local rules
 /src/errers/rules/local.py
+
+# Vim swap files
+*.swp
