@@ -20,10 +20,11 @@ on regular expressions.
 Requirements
 ============
 
-ERRERS runs on Python 3, more specifically version 3.6 or more recent. It was
-tested on Microsoft Windows, Apple macOS, and Linux. It uses the third-party
-regex module if available (https://pypi.org/project/regex), as it allows for
-faster execution, but defaults back to the standard re module if not.
+ERRERS runs on Python 3, more specifically version 3.6 or more recent. Version
+3.1.1 was tested on Microsoft Windows 10, Apple macOS 14, and Debian
+GNU/Linux 12. It uses the third-party regex module if available
+(https://pypi.org/project/regex), as it allows for faster execution, but
+defaults back to the standard re module if not.
 
 The Python distribution provided by Apple on macOS includes an older version of
 the Tkinter GUI library with which ERRERS is not compatible, but it can still
