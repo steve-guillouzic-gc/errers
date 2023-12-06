@@ -404,7 +404,7 @@ class _MainWindow:
             # When no file is selected, filename may be an empty string or an
             # empty tuple.
             if len(filename) > 0 and filename != initial_path:
-                # Path.resolve is needed because tk_askpenfilename always uses
+                # Path.resolve is needed because tk_askopenfilename always uses
                 # a forward slash as directory separator.
                 self._inpath.set(Path(filename).resolve())
                 self.reset()
