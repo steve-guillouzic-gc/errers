@@ -644,7 +644,7 @@ class _MainWindow:
                             title=errers.SHORTNAME + ' Error',
                             message=_WORD_NOT_FOUND, parent=self.root)
                     return
-                doc = word.Documents.Open(str(self._outname))
+                doc = word.Documents.Open(str(self._outname.resolve()))
                 word.Visible = True
                 shell.AppActivate(doc)
                 if word.WindowState == constants.wdWindowStateMinimize:

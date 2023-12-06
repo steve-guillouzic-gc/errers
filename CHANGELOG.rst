@@ -19,7 +19,8 @@ Fixed
 - Improve validation of timeout value in GUI.
 - Improve validation of pattern for name of output file.
 - Lock input fields during extraction.
-- Always log full path of input directory.
+- Always pass absolute path to Microsoft Word.
+- Always log absolute path of input directory.
 - Report location of files that are not writable.
 - Catch and report on file encoding mismatch.
 - Shorten copyright notice.
