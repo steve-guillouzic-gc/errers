@@ -16,6 +16,8 @@ Fixed
 -----
 - Eliminate font pixelation in GUI on Windows.
 - Make disabling of buttons more apparent on macOS.
+- Warn user of button bug on macOS 14 with Python prior to 3.11.7, and list
+  workarounds.
 - Improve validation of timeout value in GUI.
 - Improve validation of pattern for name of output file.
 - Lock input fields during extraction.

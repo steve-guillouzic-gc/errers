@@ -150,6 +150,13 @@ _FILTERED = ('Unless the verbose option is selected, only warnings and errors '
              'appear below, and informational messages are only saved to the '
              'log file. The log below may be empty after uneventful '
              'extractions.')
+_MACOS14 = textwrap.fill(textwrap.dedent(f"""\
+        Starting with macOS 14, it is preferable to use Python 3.11.7 or more
+        recent, as buttons may become unresponsive with the version of Tkinter
+        included in earlier versions. There are two workarounds for the
+        unresponsiveness bug if upgrading Python is not an option: the first is
+        to use keyboard shortcuts, and the second one is to move the window
+        (which reactivates the buttons)."""), width=1000)
 
 
 class _MainWindow:
@@ -1960,6 +1967,12 @@ def run(init_inpath=None, *, init_outpattern=_app.OUTPATTERN,
         if init_log is not None:
             main_window.log.write(init_log)
         _app.set_log_stream(main_window.log)
+        # Warn of tkinter bug for macOS >= 14. Rely on Darwin version, because
+        # platform.mac_ver() does not return more than 10.16 on python < 3.8.
+        if (platform.system() == 'Darwin'
+            and int(platform.release().split('.')[0]) >= 23
+            and sys.version_info < (3, 11, 7)):
+            _misc_logger.warning(_MACOS14)
         root.protocol('WM_DELETE_WINDOW', main_window.on_delete)
         root.deiconify()
         root.mainloop()
