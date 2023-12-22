@@ -18,7 +18,7 @@ files := $(shell git ls-files)
 files := $(if $(files), $(files), $(error Empty Git repository))
 
 # Build version string for ERRERS using information returned by "git describe"
-version_list := $(subst -, ,$(patsubst v%,%,$(shell git describe --dirty)))
+version_list := $(subst -, ,$(patsubst v%,%,$(shell git describe --dirty --tags)))
 version_list := $(if $(version_list), $(version_list), \
                      $(error Missing Git tag))
 version_public := $(word 1,$(version_list))
