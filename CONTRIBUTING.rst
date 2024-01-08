@@ -21,13 +21,12 @@ https://github.com/steve-guillouzic-gc/errers/issues. People without GitHub
 accounts can send them to steve.guillouzic@forces.gc.ca.
 
 We particularly appreciate learning about situations where the processing of
-LaTeX commands during the text extraction leads to spurious grammatical and
+LaTeX commands during text extraction leads to spurious grammatical and
 spelling errors in Microsoft Word or other grammar and spell checkers. It is
 also useful for us to know which LaTeX commands appear textually in your
 extracted text, as it will help us prioritize the implementation of rules for
-additional LaTeX commands. If you are able to design and submit substitution
-rules for these commands, please do so as it will accelerate their
-implementation.
+additional LaTeX commands. If you can design and submit substitution rules for
+these commands, please do so as it will accelerate their implementation.
 
 Code contributions
 ==================
@@ -82,9 +81,8 @@ Coding style
 
 We aim to follow PEP 8 -- Style Guide for Python Code
 (https://peps.python.org/pep-0008). Please check your code with flake8 before
-submitting it. The only remaining errors should be the copyright lines that are
-too long. It is also useful to run pylint to help catch potential errors. A
-pylintrc configuration file is provided in the src/errers directory.
+submitting it. It is also useful to run pylint to help catch potential errors.
+A pylintrc configuration file is provided in the src/errers directory.
 
 Makefile
 ========
@@ -98,7 +96,7 @@ Available make targets:
 
 archive
    generate archive of repository files in their local state
-build (default)i
+build (default)
    generate distribution packages after generating LICENSES.txt and setting
    version number
 clean
@@ -171,8 +169,8 @@ licensing terms.
 Roadmap
 =======
 
-The first priority for further development of ERRERS is the creation of a
-proper testing framework. The tests subdirectory contains an attempt at testing
+The priority for further development of ERRERS is the creation of a proper
+testing framework. The tests subdirectory contains an attempt at testing
 substitution rules using pytest, but for only one LaTeX package. We need to
 develop a series of tests for all current substitution rules and for the rest
 of the ERRERS code base.
