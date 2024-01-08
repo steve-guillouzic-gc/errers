@@ -150,9 +150,9 @@ Customization
 The extraction is performed through the application of substitution rules based
 on regular expressions. The current set of rules covers the most common LaTeX
 commands, and additional rules will be added over time. Rules are created
-automatically for LaTeX commands defined in the document using \newcommand,
-\rewnewcommand, \providecommand, \def, \edef, \gdef, and \xdef. In many cases,
-there is no need for users to define additional substitution rules.
+automatically for LaTeX commands defined in the document using \\newcommand,
+\\rewnewcommand, \\providecommand, \\def, \\edef, \\gdef, and \\xdef. In many
+cases, there is no need for users to define additional substitution rules.
 
 However, if needed, rules can be defined directly in LaTeX documents; such
 rules are applied first and can be used to override those provided with ERRERS
@@ -171,13 +171,14 @@ expressions:
 1. The %c, %r, and %s strings are replaced with patterns that respectively
    match pairs of curly, round, and square brackets with arbitrary content in
    between. The content of these bracket pairs is accessed in substitution
-   strings as sequentially numbered named groups: \g<c1>, \g<c2>, ... for %c
-   placeholders; \g<r1>, \g<r2>, ... for %r; and \g<s1>, \g<s2>, ... for %s.
+   strings as sequentially numbered named groups: \\g<c1>, \\g<c2>, ... for %c
+   placeholders; \\g<r1>, \\g<r2>, ... for %r; and \\g<s1>, \\g<s2>, ... for
+   %s.
 2. The %C string is replaced with a pattern that, in addition to matching curly
    brackets with arbitrary content, can also match an unbracketed LaTeX command
    or single character. This matches how curly brackets are handled in LaTeX.
    The captured text is accessed using the same sequence of named groups as %c:
-   \g<c1>, \g<c2>, ...
+   \\g<c1>, \\g<c2>, ...
 3. The %h, %n, and %w strings are replaced with patterns that match optional
    white space: %h matches an arbitrary amount of horizontal white space (space
    or tab), including none; %n is similar to %h, but may also include at most
@@ -187,13 +188,13 @@ expressions:
    commands (or "macros"). This is used internally by ERRERS but is unlikely to
    be needed in regular substitution rules.
 
-For instance, Rule(r'\\foo%C%C', r'\g<c1>') substitutes each occurrence of a 
-two-argument \foo command with the content of its first argument. If the rule
+For instance, Rule(r'\\\\foo%C%C', r'\\g<c1>') substitutes each occurrence of a
+two-argument \\foo command with the content of its first argument. If the rule
 should be applied only when the arguments are in curly brackets, %C should be
 replaced with %c. To use it in a given document, add the following line
 anywhere in the LaTeX file:
 
-% Rule(r'\\foo%C%C', r'\g<c1>')
+% Rule(r'\\\\foo%C%C', r'\\g<c1>')
 
 Additional information
 ======================
