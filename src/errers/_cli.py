@@ -87,7 +87,7 @@ def run():
                 errers.SHORTNAME)
             sys.exit(1)
         if args.shortcuts:
-            _gui.create_shortcuts()
+            _gui.update_shortcuts()
         else:
             _gui.run(init_inpath=args.infile,
                      init_outpattern=args.outfile,
@@ -247,7 +247,7 @@ def _create_parser():
                               'OUTFILE-patterns.txt, OUTFILE-steps.txt, '
                               'OUTFILE-times.txt, and OUTFILE-trace.txt')
     general.add_argument('--shortcuts', action='store_true',
-                         help='launch shortcut-creation GUI')
+                         help='launch shortcut-update GUI')
     general.add_argument('--version', action='store_true',
                          help='print out version number and exit')
     log = parser.add_argument_group('Debugging options (logging)')

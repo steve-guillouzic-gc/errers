@@ -936,19 +936,19 @@ class _ShortcutWindow:
 
     Attributes:
         root -- root widget of window
-        _functions -- mapping of folder to shortcut creation function
+        _updaters -- mapping of folder to shortcut update function
         _checkboxes -- list of folder checkboxes
 
     Reference for Linux shortcuts:
         https://specifications.freedesktop.org/
     """
 
-    def __init__(self, root, functions, message):
+    def __init__(self, root, updaters, message):
         """Initialize shortcut window.
 
         Attribute:
             root -- root widget of window
-            functions -- mapping of folder to shortcut creation function
+            updaters -- mapping of folder to shortcut update function
             message -- message insert for shortcut window
         """
         self.root = root
@@ -964,19 +964,23 @@ class _ShortcutWindow:
             drag-and-drop. """))
         _Description(frame, 85, message)
         _Description(frame, 85, textwrap.dedent("""\
-            Where would you like to create application shortcuts? (If shortcuts
-            already exist in those locations, they will be updated to point to
+            Which application shortcuts would you like to create or delete?
+            (Creating shortcuts that already exist updates them to point to
             this %s installation.)""" % errers.SHORTNAME))
-        self._functions = functions
+        self._updaters = updaters
         self._checkboxes = [_CheckBox(frame, 1, folder)
-                            for folder in functions]
+                            for folder in updaters]
         _ButtonRow(frame, [('create', 'Create', 0,
-                           self.start_creation, 'normal'),
+                            self.start_update, 'normal'),
+                           ('delete', 'Delete', 0,
+                            ft.partial(self.start_update, delete=True),
+                            'normal'),
                            ('cancel', 'Cancel', 2,
-                           self.root.destroy, 'normal')])
-        root.bind(f'<{MOD_KEY}-c>', lambda e: self.start_creation())
+                            self.root.destroy, 'normal')])
+        root.bind(f'<{MOD_KEY}-c>', lambda e: self.start_update())
+        root.bind(f'<{MOD_KEY}-d>', lambda e: self.start_update(delete=True))
         root.bind(f'<{MOD_KEY}-n>', lambda e: root.destroy())
-        root.bind('<Return>', lambda e: self.start_creation())
+        root.bind('<Return>', lambda e: self.start_update())
         root.bind('<Escape>', lambda e: root.destroy())
 
     @classmethod
@@ -986,19 +990,19 @@ class _ShortcutWindow:
         Attribute:
             root -- root widget of window
         """
-        functions = {'Desktop': ft.partial(cls.create_windows,
-                                           folder_name='Desktop'),
-                     'SendTo menu': ft.partial(cls.create_windows,
-                                               folder_name='SendTo'),
-                     'Start menu': ft.partial(cls.create_windows,
-                                              folder_name='StartMenu')}
+        updaters = {'Desktop': ft.partial(cls.update_windows,
+                                          folder_name='Desktop'),
+                    'SendTo menu': ft.partial(cls.update_windows,
+                                              folder_name='SendTo'),
+                    'Start menu': ft.partial(cls.update_windows,
+                                             folder_name='StartMenu')}
         message = textwrap.dedent(f"""\
             For instance, dragging a LaTeX file and dropping it on a desktop
             shortcut launches the application GUI with the input file path
             already filled out. Right-clicking on a LaTeX file and choosing
             {errers.SHORTNAME} under the "Send To" submenu does the same
             thing.""")
-        return cls(root, functions, message)
+        return cls(root, updaters, message)
 
     @classmethod
     def for_macos(cls, root):
@@ -1009,9 +1013,9 @@ class _ShortcutWindow:
         """
         home = Path.home()
         applications = home.joinpath('Applications')
-        functions = {'User applications folder, Launchpad, '
-                     'and "Open with" menu':
-                     ft.partial(cls.create_macos, folder=applications)}
+        updaters = {'User applications folder, Launchpad, '
+                    'and "Open with" menu':
+                    ft.partial(cls.update_macos, folder=applications)}
         message = textwrap.dedent(f"""\
             For instance, dragging a LaTeX file and dropping it on one of the
             shortcuts launches the application GUI with the input file path
@@ -1020,7 +1024,7 @@ class _ShortcutWindow:
             After creation, the shortcut from the Applications folder or the
             Launchpad can be dragged and dropped onto the Dock for easier
             access.""")
-        return cls(root, functions, message)
+        return cls(root, updaters, message)
 
     @classmethod
     def for_linux(cls, root):
@@ -1049,19 +1053,19 @@ class _ShortcutWindow:
         short = f'{errers.SHORTNAME}.desktop'
         full = f'ca.gc.drdc_rddc.{short}'
         if desktop.exists() and desktop != home:
-            functions = {'Desktop':
-                         ft.partial(cls.create_linux,
-                                    file_path=desktop.joinpath(short),
-                                    chmod=True)}
+            updaters = {'Desktop':
+                        ft.partial(cls.update_linux,
+                                   file_path=desktop.joinpath(short),
+                                   chmod=True)}
         else:
-            functions = {'Home':
-                         ft.partial(cls.create_linux,
-                                    file_path=home.joinpath(short),
-                                    chmod=True)}
+            updaters = {'Home':
+                        ft.partial(cls.update_linux,
+                                   file_path=home.joinpath(short),
+                                   chmod=True)}
         if menu.exists():
-            functions['Application menu (under Utilities) '
-                      'and "Open With" menu'] \
-                    = ft.partial(cls.create_linux,
+            updaters['Application menu (under Utilities) '
+                     'and "Open With" menu'] \
+                    = ft.partial(cls.update_linux,
                                  file_path=menu.joinpath(full),
                                  chmod=False)
         message = textwrap.dedent(f"""\
@@ -1071,40 +1075,49 @@ class _ShortcutWindow:
             {errers.SHORTNAME} under the "Open With" menu does the same thing.
             (Note: The application offers to create a shortcut in the home
             folder if the desktop folder is not found.)""")
-        cls(root, functions, message)
+        cls(root, updaters, message)
 
-    def start_creation(self):
-        """Start shortcut creation in separate thread."""
+    def start_update(self, delete=False):
+        """Start shortcut creation in separate thread.
+
+        Argument:
+            delete -- delete rather than create or update shortcut
+        """
         # pylint: disable=broad-except
         # Reason: exception logged
         try:
-            self._creator = threading.Thread(target=self.create,
-                                             daemon=True)
-            self._creator.start()
+            updater = threading.Thread(target=self.update, args=(delete,),
+                                       daemon=True)
+            updater.start()
         except Exception:
             _misc_logger.exception(_UNEXPECTED)
 
-    def create(self):
-        """Create selected shortcuts."""
+    def update(self, delete):
+        """Create or delete selected shortcuts.
+
+        Argument:
+            delete -- delete rather than create or update shortcut
+        """
         # pylint: disable=broad-except
         # Reason: exception logged
         try:
             with _Busy(self.root):
                 for checkbox, function in zip(self._checkboxes,
-                                              self._functions.values()):
+                                              self._updaters.values()):
                     if checkbox.get():
-                        if not function(self):
+                        if not function(self, delete=delete):
                             break
             self.root.destroy()
         except Exception:
             _misc_logger.exception(_UNEXPECTED)
 
-    def create_windows(self, folder_name):
+    def update_windows(self, folder_name, delete):
         """Create shortcut on Windows platform.
 
-        Argument:
+        Arguments:
             folder_name -- special folder where to create shortcut (should be
                 "Desktop", "SendTo" or "StartMenu")
+            delete -- delete shortcut rather than create or update it
 
         Returns:
             Boolean indicating if shortcut creation was successful
@@ -1122,23 +1135,26 @@ class _ShortcutWindow:
                                         parent=self.root)
                 return False
             folder = Path(shell.SpecialFolders(folder_name))
-            shortcut = shell.CreateShortcut(
-                    folder.joinpath(errers.SHORTNAME + '.lnk'))
-            if getattr(sys, 'frozen', False):
-                # App is frozen
-                shortcut.TargetPath = '"%s"' % sys.executable
-                shortcut.Arguments = '--gui'
+            shortcut_path = folder.joinpath(errers.SHORTNAME + '.lnk')
+            if delete:
+                shortcut_path.unlink(missing_ok=True)
             else:
-                # App is not frozen
-                executable \
-                    = Path(sys.executable).parent.joinpath('pythonw.exe')
-                shortcut.TargetPath = '"%s"' % executable
-                shortcut.Arguments \
-                    = '-c "import errers; errers._cli.run()" --gui'
-            shortcut.WorkingDirectory = r'%USERPROFILE%\Documents'
-            shortcut.IconLocation \
-                = str(Path(__file__).parent.joinpath('icon', 'errers.ico'))
-            shortcut.Save()
+                shortcut = shell.CreateShortcut(shortcut_path)
+                if getattr(sys, 'frozen', False):
+                    # App is frozen
+                    shortcut.TargetPath = '"%s"' % sys.executable
+                    shortcut.Arguments = '--gui'
+                else:
+                    # App is not frozen
+                    executable \
+                        = Path(sys.executable).parent.joinpath('pythonw.exe')
+                    shortcut.TargetPath = '"%s"' % executable
+                    shortcut.Arguments \
+                        = '-c "import errers; errers._cli.run()" --gui'
+                shortcut.WorkingDirectory = r'%USERPROFILE%\Documents'
+                shortcut.IconLocation \
+                    = str(Path(__file__).parent.joinpath('icon', 'errers.ico'))
+                shortcut.Save()
             return True
         except Exception:
             _misc_logger.exception(_UNEXPECTED)
@@ -1148,49 +1164,54 @@ class _ShortcutWindow:
                                     parent=self.root)
             return False
 
-    def create_macos(self, folder):
+    def update_macos(self, folder, delete):
         """Create shortcut on macOS platform.
 
         This is done by creating an application using the osacompile utility
         provided by Apple.
 
+        Arguments:
             folder -- folder where to create shortcut
+            delete -- delete shortcut rather than create or update it
         """
         # pylint: disable=broad-except
         # Reason: exception logged
         try:
             tmp = folder.joinpath(f'{errers.SHORTNAME}_tmp.app')
             final = folder.joinpath(f'{errers.SHORTNAME}.app')
-            icon_old = tmp.joinpath('Contents', 'Resources', 'droplet.icns')
-            icon_new = Path(__file__).parent.joinpath('icon', 'errers.icns')
-            info_plist = tmp.joinpath('Contents', 'Info.plist')
-            executable = Path(sys.executable).parent.joinpath('errers')
-            script = textwrap.dedent(f"""\
-                on run
-                    do shell script "{executable}"
-                end run
-
-                on open LaTeX_file
-                    set LaTeX_path to POSIX path of LaTeX_file
-                    do shell script "{executable} --gui " & LaTeX_path
-                end open""")
-            folder.mkdir(parents=True, exist_ok=True)
             shutil.rmtree(str(tmp), ignore_errors=True)
             shutil.rmtree(str(final), ignore_errors=True)
-            sp.run(['osacompile', '-o', str(tmp)], input=script,
-                   universal_newlines=True, stderr=sp.PIPE, check=True)
-            Path(icon_old).unlink()
-            shutil.copy(str(icon_new), str(icon_old.parent))
-            with open(info_plist, 'rb') as info_file:
-                info = plistlib.load(info_file)
-                doc_types = info['CFBundleDocumentTypes']
-                doc_extensions = doc_types[0]['CFBundleTypeExtensions']
-                doc_extensions[0] = 'tex'
-                info['CFBundleIconFile'] = 'errers'
-            with open(info_plist, 'wb') as info_file:
-                plistlib.dump(info, info_file)
-            shutil.copytree(str(tmp), str(final))
-            shutil.rmtree(str(tmp))
+            if not delete:
+                icon_old = tmp.joinpath('Contents', 'Resources', 
+                                        'droplet.icns')
+                icon_new = Path(__file__).parent.joinpath('icon',
+                                                          'errers.icns')
+                info_plist = tmp.joinpath('Contents', 'Info.plist')
+                executable = Path(sys.executable).parent.joinpath('errers')
+                script = textwrap.dedent(f"""\
+                    on run
+                        do shell script "{executable}"
+                    end run
+
+                    on open LaTeX_file
+                        set LaTeX_path to POSIX path of LaTeX_file
+                        do shell script "{executable} --gui " & LaTeX_path
+                    end open""")
+                folder.mkdir(parents=True, exist_ok=True)
+                sp.run(['osacompile', '-o', str(tmp)], input=script,
+                       universal_newlines=True, stderr=sp.PIPE, check=True)
+                Path(icon_old).unlink()
+                shutil.copy(str(icon_new), str(icon_old.parent))
+                with open(info_plist, 'rb') as info_file:
+                    info = plistlib.load(info_file)
+                    doc_types = info['CFBundleDocumentTypes']
+                    doc_extensions = doc_types[0]['CFBundleTypeExtensions']
+                    doc_extensions[0] = 'tex'
+                    info['CFBundleIconFile'] = 'errers'
+                with open(info_plist, 'wb') as info_file:
+                    plistlib.dump(info, info_file)
+                shutil.copytree(str(tmp), str(final))
+                shutil.rmtree(str(tmp))
             return True
         except Exception:
             _misc_logger.exception(_UNEXPECTED)
@@ -1200,30 +1221,35 @@ class _ShortcutWindow:
                                     parent=self.root)
             return False
 
-    def create_linux(self, file_path, chmod):
+    def update_linux(self, file_path, chmod, delete):
         """Create shortcut on Linux platform.
 
-        Argument:
+        Arguments:
             file_path -- path of shortcut file
             chmod -- whether to make the file executable
+            delete -- delete shortcut rather than create or update it
         """
         # pylint: disable=broad-except
         # Reason: exception logged
         try:
-            icon = Path(__file__).parent.joinpath('icon', 'errers.png')
-            executable = Path(sys.executable).parent.joinpath('errers')
-            content = textwrap.dedent(f"""\
-                [Desktop Entry]
-                Type=Application
-                Name={errers.SHORTNAME}
-                Comment={errers.LONGNAME}
-                Icon={icon}
-                Exec={executable} --gui %f
-                MimeType=text/x-tex
-                Categories=Utility""")
-            file_path.write_text(content)
-            if chmod:
-                os.chmod(file_path, os.stat(file_path).st_mode | stat.S_IXUSR)
+            if delete:
+                file_path.unlink(missing_ok=True)
+            else:
+                icon = Path(__file__).parent.joinpath('icon', 'errers.png')
+                executable = Path(sys.executable).parent.joinpath('errers')
+                content = textwrap.dedent(f"""\
+                    [Desktop Entry]
+                    Type=Application
+                    Name={errers.SHORTNAME}
+                    Comment={errers.LONGNAME}
+                    Icon={icon}
+                    Exec={executable} --gui %f
+                    MimeType=text/x-tex
+                    Categories=Utility""")
+                file_path.write_text(content)
+                if chmod:
+                    os.chmod(file_path,
+                             os.stat(file_path).st_mode | stat.S_IXUSR)
             return True
         except Exception:
             _misc_logger.exception(_UNEXPECTED)
@@ -1980,8 +2006,8 @@ def run(init_inpath=None, *, init_outpattern=_app.OUTPATTERN,
         _misc_logger.exception(_UNEXPECTED)
 
 
-def create_shortcuts():
-    """Start GUI for shortcut creation."""
+def update_shortcuts():
+    """Start GUI for shortcut creation or deletion."""
     # pylint: disable=broad-except
     # Reason: exception logged
     _app.set_log_stream(sys.stderr)
@@ -1989,7 +2015,7 @@ def create_shortcuts():
         if 'win32com.client' in sys.modules:
             sw_init = _ShortcutWindow.for_windows
         else:
-            _misc_logger.error('On Microsoft Windows, shortcut creation '
+            _misc_logger.error('On Microsoft Windows, shortcut update '
                                'requires the pywin32 package.')
             return
     elif platform.system() == 'Darwin':

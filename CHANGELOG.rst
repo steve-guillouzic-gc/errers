@@ -9,6 +9,13 @@
 ERRERS: Change Log
 ==================
 
+3.2, unreleased
+===============
+
+Added
+-----
+- Add "Delete" button to shortcut window
+
 3.1.1, 2023-12-22
 =================
 
