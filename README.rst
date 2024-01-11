@@ -62,7 +62,7 @@ a local Python installation. To install it:
    may need to use ``py`` or ``python`` rather than ``python3``. You may also
    need to use ``pipx`` rather than ``pip``.
 3. Type ``errers --shortcuts`` at the command prompt and press enter.
-4. In the shortcut-creation window that appears, choose the locations where you
+4. In the shortcut-update window that appears, choose the locations where you
    would like application shortcuts to be created and click "Create". The
    available locations vary from one operating system to another:
 
@@ -112,6 +112,22 @@ Local network administrators may offer other methods of installing ERRERS. For
 instance, the ERRERS source code is distributed with a script that bundles it
 into a standalone Windows application that does not require Python. This is not
 covered here, as it is outside the scope of this manual.
+
+Removal
+=======
+
+To remove ERRERS:
+
+1. Open a command prompt or shell from which Python can be run. For instance,
+   with the Anaconda Python distribution, you would choose Programs >>
+   Anaconda3 >> Anaconda Prompt in the Windows Start menu.
+2. Type ``errers --shortcuts`` at the command prompt and press enter.
+3. In the shortcut-update window that appears, click "Delete" to delete
+   application shortcuts. If shortcuts had been copied to other locations, they
+   must be deleted manually.
+4. Type ``python3 -m pip uninstall errers`` and press enter. On some systems,
+   you may need to use ``py`` or ``python`` rather than ``python3``. You may
+   also need to use ``pipx`` rather than ``pip``.
 
 Usage
 =====
