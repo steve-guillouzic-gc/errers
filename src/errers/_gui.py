@@ -1188,7 +1188,7 @@ class _ShortcutWindow:
             delete -- delete shortcut rather than create or update it
 
         Returns:
-            Boolean indicating if shortcut creation was successful
+            Boolean indicating if shortcut update was successful
         """
         # pylint: disable=broad-except
         # Reason: exception logged
@@ -1233,7 +1233,7 @@ class _ShortcutWindow:
             return False
 
     def update_macos(self, folder, delete):
-        """Create shortcut on macOS platform.
+        """Create or delete shortcut on macOS platform.
 
         This is done by creating an application using the osacompile utility
         provided by Apple.
@@ -1241,6 +1241,9 @@ class _ShortcutWindow:
         Arguments:
             folder -- folder where to create shortcut
             delete -- delete shortcut rather than create or update it
+
+        Returns:
+            Boolean indicating if shortcut update was successful
         """
         # pylint: disable=broad-except
         # Reason: exception logged
@@ -1290,12 +1293,15 @@ class _ShortcutWindow:
             return False
 
     def update_linux(self, file_path, chmod, delete):
-        """Create shortcut on Linux platform.
+        """Create or delete shortcut on Linux platform.
 
         Arguments:
             file_path -- path of shortcut file
             chmod -- whether to make the file executable
             delete -- delete shortcut rather than create or update it
+
+        Returns:
+            Boolean indicating if shortcut update was successful
         """
         # pylint: disable=broad-except
         # Reason: exception logged
