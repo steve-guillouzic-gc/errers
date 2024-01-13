@@ -14,8 +14,9 @@ ERRERS: Change Log
 
 Added
 -----
-- Add "Delete" button to shortcut window
-- Document removal procedure in README file
+- Add "Delete" button to shortcut window.
+- In Windows, replace "Send To" shortcut by entry in "Open With" menu.
+- Document removal procedure in README file.
 
 3.1.1, 2023-12-22
 =================

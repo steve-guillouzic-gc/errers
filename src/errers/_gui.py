@@ -76,6 +76,10 @@ try:
 except ModuleNotFoundError:
     pass
 try:
+    import winreg
+except ModuleNotFoundError:
+    pass
+try:
     import pythoncom
     import win32com.client
 except ModuleNotFoundError:
@@ -990,11 +994,10 @@ class _ShortcutWindow:
         Attribute:
             root -- root widget of window
         """
-        updaters = {'Desktop': ft.partial(cls.update_windows,
+        updaters = {'Desktop': ft.partial(cls.update_windows_other,
                                           folder_name='Desktop'),
-                    'SendTo menu': ft.partial(cls.update_windows,
-                                              folder_name='SendTo'),
-                    'Start menu': ft.partial(cls.update_windows,
+                    'Open With menu': cls.update_windows_open_with,
+                    'Start menu': ft.partial(cls.update_windows_other,
                                              folder_name='StartMenu')}
         message = textwrap.dedent(f"""\
             For instance, dragging a LaTeX file and dropping it on a desktop
@@ -1111,8 +1114,73 @@ class _ShortcutWindow:
         except Exception:
             _misc_logger.exception(_UNEXPECTED)
 
-    def update_windows(self, folder_name, delete):
-        """Create shortcut on Windows platform.
+    def update_windows_open_with(self, delete):
+        """Add to, or remove from, "Open With" menu on Windows platform.
+
+        Arguments:
+            delete -- delete shortcut rather than create or update it
+
+        Returns:
+            Boolean indicating if shortcut update was successful
+        """
+        # pylint: disable=broad-except
+        # Reason: exception logged
+        try:
+            if delete:
+                keys = [
+                    r'Software\Classes\tex_errers\shell\open\command',
+                    r'Software\Classes\tex_errers\shell\open',
+                    r'Software\Classes\tex_errers\shell',
+                    r'Software\Classes\tex_errers']
+                values = [
+                    (r'Software\Microsoft\Windows\CurrentVersion\Explorer'
+                     r'\FileExts\.tex\OpenWithProgids',
+                     'tex_errers')]
+                for sub_key in keys:
+                    winreg.DeleteKey(winreg.HKEY_CURRENT_USER, sub_key)
+                for sub_key, sub_sub_key in values:
+                    with winreg.CreateKey(winreg.HKEY_CURRENT_USER,
+                                          sub_key) as key:
+                        winreg.DeleteValue(key, sub_sub_key)
+            else:
+                if getattr(sys, 'frozen', False):
+                    # App is frozen
+                    command = '"%s"' % sys.executable
+                else:
+                    # App is not frozen
+                    pyw = Path(sys.executable).parent.joinpath('pythonw.exe')
+                    command = ('"%s" -c "import errers; errers._cli.run()"'
+                               % pyw)
+                keys = [
+                    (r'Software\Classes\tex_errers\shell\open',
+                     'FriendlyAppName',
+                     winreg.REG_SZ,
+                     'ERRERS'),
+                    (r'Software\Classes\tex_errers\shell\open\command',
+                     '',
+                     winreg.REG_SZ,
+                     '%s --gui "%%1"' % command),
+                    (r'Software\Microsoft\Windows\CurrentVersion\Explorer'
+                     r'\FileExts\.tex\OpenWithProgids',
+                     'tex_errers',
+                     winreg.REG_NONE,
+                     b'')]
+                for sub_key, sub_sub_key, value_type, value in keys:
+                    with winreg.CreateKey(winreg.HKEY_CURRENT_USER,
+                                          sub_key) as key:
+                        winreg.SetValueEx(key, sub_sub_key, 0,
+                                          value_type, value)
+            return True
+        except Exception:
+            _misc_logger.exception(_UNEXPECTED)
+            tk.messagebox.showerror(title=errers.SHORTNAME + ' Error',
+                                    message=_UNEXPECTED_MESSAGE,
+                                    detail=_UNEXPECTED_DETAIL,
+                                    parent=self.root)
+            return False
+
+    def update_windows_other(self, folder_name, delete):
+        """Create or delete shortcut on Windows platform.
 
         Arguments:
             folder_name -- special folder where to create shortcut (should be
