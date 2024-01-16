@@ -1696,7 +1696,8 @@ class _Hyperlink:
         """
         self._label.configure(relief=tk.FLAT)
         if self._active:
-            threading.Thread(target=self._copy_text, daemon=True).start()
+            self._root.clipboard_clear()
+            self._root.clipboard_append(self._label.cget('text'))
 
     def _activate(self, _):
         """Event handler for when cursor enters hyperlink area.
@@ -1718,11 +1719,6 @@ class _Hyperlink:
         """Open browser and reset cursor once done."""
         with _Busy(self._root, [self._label]):
             webbrowser.open(self._url)
-
-    def _copy_text(self):
-        """Copy hyperlink text to clipboard."""
-        self._root.clipboard_clear()
-        self._root.clipboard_append(self._label.cget('text'))
 
 
 class _LogBox:
