@@ -30,7 +30,7 @@ Classes (internal):
     _MainWindow -- main GUI window
     _HelpWindow -- window for help text
     _OptionsWindow -- window for specifying options
-    _ShortcutWindow -- window for shortcut creation
+    _ShortcutWindow -- window for shortcut creation and deletion
     _SectionLabel -- section label in GUI
     _SubSectionLabel -- sub-section label in GUI
     _TextField -- single-line text field in GUI
@@ -919,24 +919,24 @@ class _OptionsWindow(tk.Toplevel):
 
 
 class _ShortcutWindow:
-    """Window for shortcut creation.
+    """Window for shortcut creation and deletion.
 
     Some shortcuts can also be used as drag-and-drop target for input files.
 
     Widgets are laid out in the same way as the main window.
 
     Class methods:
-        for_windows -- create shortcut creation window for Microsoft Windows
-        for_macos -- create shortcut creation window for macOS
-        for_linux -- create shortcut creation window for Linux
+        for_windows -- create shortcut update window for Microsoft Windows
+        for_macos -- create shortcut update window for macOS
+        for_linux -- create shortcut update window for Linux
 
     Methods:
         __init__ -- window initializer
-        start_creation -- start thread for shortcut creation
-        create -- create selected shortcuts
-        create_windows -- create shortcut on Windows platform
-        create_macos -- create shortcut on macOS platform
-        create_linux -- create shortcut on Linux platform
+        start_update -- start thread for shortcut creation and deletion
+        update -- create or delete selected shortcuts
+        update_windows -- create or delete shortcut on Windows platform
+        update_macos -- create or delete shortcut on macOS platform
+        update_linux -- create or delete shortcut on Linux platform
 
     Attributes:
         root -- root widget of window
@@ -961,7 +961,7 @@ class _ShortcutWindow:
                                         errers.__version__))
         frame = ttk.Frame(self.root)
         frame.grid(row=0, column=0, ipadx=5, sticky='news')
-        _SectionLabel(frame, 'Shortcut creation')
+        _SectionLabel(frame, 'Shortcut creation and deletion')
         _Description(frame, 85, textwrap.dedent("""\
             Creating shortcuts is optional, but it streamlines usage by
             providing a simple way to launch the tool and allowing
@@ -989,7 +989,7 @@ class _ShortcutWindow:
 
     @classmethod
     def for_windows(cls, root):
-        """Create shortcut creation window for Microsoft Windows.
+        """Create shortcut creation and deletion window for Microsoft Windows.
 
         Attribute:
             root -- root widget of window
@@ -1009,7 +1009,7 @@ class _ShortcutWindow:
 
     @classmethod
     def for_macos(cls, root):
-        """Create shortcut creation window for macOS.
+        """Create shortcut creation and deletion window for macOS.
 
         Attribute:
             root -- root widget of window
@@ -1031,7 +1031,7 @@ class _ShortcutWindow:
 
     @classmethod
     def for_linux(cls, root):
-        """Create shortcut creation window for Linux.
+        """Create shortcut creation and deletion window for Linux.
 
         Attribute:
             root -- root widget of window
