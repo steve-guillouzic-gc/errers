@@ -50,6 +50,7 @@ Functions (internal):
 
 __all__ = ['run']
 
+from concurrent import futures
 import ctypes
 import functools as ft
 import logging
@@ -1684,9 +1685,19 @@ class _Hyperlink:
         Arguments:
             event -- event details (ignored)
         """
-        self._label.configure(relief=tk.FLAT)
-        if self._active:
-            threading.Thread(target=self._open_browser, daemon=True).start()
+        # pylint: disable=broad-except
+        # Reason: exception logged
+        try:
+            self._label.configure(relief=tk.FLAT)
+            if self._active:
+                busy = _Busy(self._root, [self._label])
+                busy.__enter__()
+                executor = futures.ThreadPoolExecutor(1, 'open_browser')
+                future = executor.submit(self._open_browser)
+                executor.shutdown(wait=False)
+                self._root.after(100, self._monitor_open_browser, future, busy)
+        except Exception:
+            _misc_logger.exception(_UNEXPECTED)
 
     def _on_release_right(self, _):
         """Event handler for when user releases right mouse button.
@@ -1716,9 +1727,37 @@ class _Hyperlink:
         self._active = False
 
     def _open_browser(self):
-        """Open browser and reset cursor once done."""
-        with _Busy(self._root, [self._label]):
+        """Open browser. """
+        # pylint: disable=broad-except
+        # Reason: exception logged
+        try:
             webbrowser.open(self._url)
+        except Exception:
+            _misc_logger.exception(_UNEXPECTED)
+
+    def _monitor_open_browser(self, future, busy):
+        """Monitor browser opening.
+
+        Disable busy cursor once done. Log errors if any.
+
+        Arguments:
+            future -- execution of browser opening
+            busy -- context manager displaying busy cursor
+        """
+        # pylint: disable=broad-except
+        # Reason: exception logged
+        try:
+            try:
+                done = True
+                future.result(timeout=0)
+            except futures.TimeoutError:
+                self._root.after(100, self._monitor_open_browser, future, busy)
+                done = False
+            finally:
+                if done:
+                    busy.__exit__(*sys.exc_info())
+        except Exception:
+            _misc_logger.exception(_UNEXPECTED)
 
 
 class _LogBox:
