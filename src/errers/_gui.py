@@ -1090,9 +1090,12 @@ class _ShortcutWindow:
         # pylint: disable=broad-except
         # Reason: exception logged
         try:
-            updater = threading.Thread(target=self.update, args=(delete,),
-                                       daemon=True)
-            updater.start()
+            busy = _Busy(self.root)
+            busy.__enter__()
+            executor = futures.ThreadPoolExecutor(1, 'update_shortcuts')
+            future = executor.submit(self.update, delete)
+            executor.shutdown(wait=False)
+            self.root.after(100, self.monitor_update, future, busy)
         except Exception:
             _misc_logger.exception(_UNEXPECTED)
 
@@ -1104,14 +1107,34 @@ class _ShortcutWindow:
         """
         # pylint: disable=broad-except
         # Reason: exception logged
+        for checkbox, function in zip(self._checkboxes,
+                                      self._updaters.values()):
+            if checkbox.get():
+                if not function(self, delete=delete):
+                    break
+
+    def monitor_update(self, future, busy):
+        """Monitor shortcut update.
+
+        Disable busy cursor once done. Log errors if any.
+
+        Arguments:
+            future -- execution of browser opening
+            busy -- context manager displaying busy cursor
+        """
+        # pylint: disable=broad-except
+        # Reason: exception logged
         try:
-            with _Busy(self.root):
-                for checkbox, function in zip(self._checkboxes,
-                                              self._updaters.values()):
-                    if checkbox.get():
-                        if not function(self, delete=delete):
-                            break
-            self.root.destroy()
+            try:
+                done = True
+                future.result(timeout=0)
+            except futures.TimeoutError:
+                self.root.after(100, self.monitor_update, future, busy)
+                done = False
+            finally:
+                if done:
+                    busy.__exit__(*sys.exc_info())
+                    self.root.destroy()
         except Exception:
             _misc_logger.exception(_UNEXPECTED)
 
