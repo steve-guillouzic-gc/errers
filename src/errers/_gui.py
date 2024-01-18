@@ -1677,7 +1677,12 @@ class _Hyperlink:
         Arguments:
             event -- event details (ignored)
         """
-        self._label.configure(relief=tk.SUNKEN)
+        # pylint: disable=broad-except
+        # Reason: exception logged
+        try:
+            self._label.configure(relief=tk.SUNKEN)
+        except Exception:
+            _misc_logger.exception(_UNEXPECTED)
 
     def _on_release_left(self, _):
         """Event handler for when user releases left mouse button.
@@ -1705,10 +1710,15 @@ class _Hyperlink:
         Arguments:
             event -- event details (ignored)
         """
-        self._label.configure(relief=tk.FLAT)
-        if self._active:
-            self._root.clipboard_clear()
-            self._root.clipboard_append(self._label.cget('text'))
+        # pylint: disable=broad-except
+        # Reason: exception logged
+        try:
+            self._label.configure(relief=tk.FLAT)
+            if self._active:
+                self._root.clipboard_clear()
+                self._root.clipboard_append(self._label.cget('text'))
+        except Exception:
+            _misc_logger.exception(_UNEXPECTED)
 
     def _activate(self, _):
         """Event handler for when cursor enters hyperlink area.
