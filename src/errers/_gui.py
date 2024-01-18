@@ -1639,7 +1639,6 @@ class _Hyperlink:
         _on_release_right -- event handler when right mouse button released
         _activate -- event handler when cursor enters hyperlink area
         _deactivate -- event handler when cursor leaves hyperlink area
-        _open_browser -- open browser and reset cursor once done
         _monitor_open_browser -- monitor browser opening
     """
 
@@ -1698,7 +1697,7 @@ class _Hyperlink:
                 busy = _Busy(self._root, [self._label])
                 busy.__enter__()
                 executor = futures.ThreadPoolExecutor(1, 'open_browser')
-                future = executor.submit(self._open_browser)
+                future = executor.submit(webbrowser.open, self._url)
                 executor.shutdown(wait=False)
                 self._root.after(100, self._monitor_open_browser, future, busy)
         except Exception:
@@ -1735,15 +1734,6 @@ class _Hyperlink:
             event -- event details (ignored)
         """
         self._active = False
-
-    def _open_browser(self):
-        """Open browser. """
-        # pylint: disable=broad-except
-        # Reason: exception logged
-        try:
-            webbrowser.open(self._url)
-        except Exception:
-            _misc_logger.exception(_UNEXPECTED)
 
     def _monitor_open_browser(self, future, busy):
         """Monitor browser opening.
