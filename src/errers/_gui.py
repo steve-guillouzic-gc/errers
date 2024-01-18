@@ -1640,7 +1640,7 @@ class _Hyperlink:
         _activate -- event handler when cursor enters hyperlink area
         _deactivate -- event handler when cursor leaves hyperlink area
         _open_browser -- open browser and reset cursor once done
-        _copy_text -- copy hyperlink text to clipboard
+        _monitor_open_browser -- monitor browser opening
     """
 
     def __init__(self, root, url, text=None):
