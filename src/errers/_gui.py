@@ -2057,6 +2057,7 @@ class _Busy:
             widget.configure(cursor=default)
         self._root.update()
 
+
 class _BackgroundTask:
     """Background task running in another thread.
 
