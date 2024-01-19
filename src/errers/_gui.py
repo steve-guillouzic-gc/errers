@@ -1153,11 +1153,17 @@ class _ShortcutWindow:
                      r'\FileExts\.tex\OpenWithProgids',
                      'tex_errers')]
                 for sub_key in keys:
-                    winreg.DeleteKey(winreg.HKEY_CURRENT_USER, sub_key)
+                    try:
+                        winreg.DeleteKey(winreg.HKEY_CURRENT_USER, sub_key)
+                    except FileNotFoundError:
+                        pass
                 for sub_key, sub_sub_key in values:
                     with winreg.CreateKey(winreg.HKEY_CURRENT_USER,
                                           sub_key) as key:
-                        winreg.DeleteValue(key, sub_sub_key)
+                        try:
+                            winreg.DeleteValue(key, sub_sub_key)
+                        except FileNotFoundError:
+                            pass
             else:
                 if getattr(sys, 'frozen', False):
                     # App is frozen
