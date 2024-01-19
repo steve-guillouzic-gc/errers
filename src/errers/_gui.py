@@ -43,6 +43,7 @@ Classes (internal):
     _ButtonRow -- row of buttons in GUI
     _Status -- status bar
     _Busy -- context manager displaying a busy cursor in GUI
+    _BackgroundTask -- background task running in another thread
 
 Functions (internal):
     _dispatch -- return COM object with early-binding, clearing cache if needed
@@ -935,6 +936,7 @@ class _ShortcutWindow:
         __init__ -- window initializer
         start_update -- start thread for shortcut creation and deletion
         update -- create or delete selected shortcuts
+        finalize_update -- close window and handle exceptions
         update_windows -- create or delete shortcut on Windows platform
         update_macos -- create or delete shortcut on macOS platform
         update_linux -- create or delete shortcut on Linux platform
@@ -1090,12 +1092,10 @@ class _ShortcutWindow:
         # pylint: disable=broad-except
         # Reason: exception logged
         try:
-            busy = _Busy(self.root)
-            busy.__enter__()
-            executor = futures.ThreadPoolExecutor(1, 'update_shortcuts')
-            future = executor.submit(self.update, delete)
-            executor.shutdown(wait=False)
-            self.root.after(100, self.monitor_update, future, busy)
+            _BackgroundTask(self.root, 'update_shortcuts',
+                            task=self.update,
+                            args=(delete,),
+                            callback=self.finalize_update)
         except Exception:
             _misc_logger.exception(_UNEXPECTED)
 
@@ -1113,28 +1113,20 @@ class _ShortcutWindow:
                 if not function(self, delete=delete):
                     break
 
-    def monitor_update(self, future, busy):
-        """Monitor shortcut update.
+    def finalize_update(self, future):
+        """Finalize update by closing window and handling exceptions.
 
-        Disable busy cursor once done. Log errors if any.
-
-        Arguments:
-            future -- execution of browser opening
-            busy -- context manager displaying busy cursor
+        Argument:
+            future -- execution of shortcut update
         """
         # pylint: disable=broad-except
         # Reason: exception logged
         try:
-            try:
-                done = True
-                future.result(timeout=0)
-            except futures.TimeoutError:
-                self.root.after(100, self.monitor_update, future, busy)
-                done = False
-            finally:
-                if done:
-                    busy.__exit__(*sys.exc_info())
-                    self.root.destroy()
+            future.result(timeout=0)
+        except Exception:
+            _misc_logger.exception(_UNEXPECTED)
+        try:
+            self.root.after(0, self.root.destroy)
         except Exception:
             _misc_logger.exception(_UNEXPECTED)
 
@@ -1662,7 +1654,7 @@ class _Hyperlink:
         _on_release_right -- event handler when right mouse button released
         _activate -- event handler when cursor enters hyperlink area
         _deactivate -- event handler when cursor leaves hyperlink area
-        _monitor_open_browser -- monitor browser opening
+        _handle_exceptions -- handle exceptions from browser opening
     """
 
     def __init__(self, root, url, text=None):
@@ -1717,12 +1709,11 @@ class _Hyperlink:
         try:
             self._label.configure(relief=tk.FLAT)
             if self._active:
-                busy = _Busy(self._root, [self._label])
-                busy.__enter__()
-                executor = futures.ThreadPoolExecutor(1, 'open_browser')
-                future = executor.submit(webbrowser.open, self._url)
-                executor.shutdown(wait=False)
-                self._root.after(100, self._monitor_open_browser, future, busy)
+                _BackgroundTask(self._root, 'open_browser',
+                                task=webbrowser.open,
+                                args=(self._url,),
+                                callback=self._handle_exceptions,
+                                widgets=[self._label])
         except Exception:
             _misc_logger.exception(_UNEXPECTED)
 
@@ -1758,27 +1749,16 @@ class _Hyperlink:
         """
         self._active = False
 
-    def _monitor_open_browser(self, future, busy):
-        """Monitor browser opening.
+    def _handle_exceptions(self, future):
+        """Handle exceptions from browser opening.
 
-        Disable busy cursor once done. Log errors if any.
-
-        Arguments:
+        Argument:
             future -- execution of browser opening
-            busy -- context manager displaying busy cursor
         """
         # pylint: disable=broad-except
         # Reason: exception logged
         try:
-            try:
-                done = True
-                future.result(timeout=0)
-            except futures.TimeoutError:
-                self._root.after(100, self._monitor_open_browser, future, busy)
-                done = False
-            finally:
-                if done:
-                    busy.__exit__(*sys.exc_info())
+            future.result(timeout=0)
         except Exception:
             _misc_logger.exception(_UNEXPECTED)
 
@@ -2070,6 +2050,59 @@ class _Busy:
         for (widget, default) in zip(self._widgets, self._default):
             widget.configure(cursor=default)
         self._root.update()
+
+class _BackgroundTask:
+    """Background task running in another thread.
+
+    The busy cursor is displayed while the task is run.
+
+    Attributes:
+        _busy -- context manager displaying busy cursor
+    """
+
+    def __init__(self, root, thread_name, *, task, callback,
+                 args=(), kwargs={}, widgets=None):
+        """Initialize background task.
+
+        Arguments:
+            root -- parent widget
+            thread_name -- thread name (for debugging)
+            task -- callable to be run in other thread
+            callback -- callable to be called on completion of task, with
+                Future object (from concurrent.futures) as single argument; at 
+                a minimum, it should call future.result and handle exceptions
+            args -- positional arguments of task
+            kwargs -- keyword arguments of task
+            widgets -- list of widgets for which to show busy cursor (root if
+                None)
+        """
+        # pylint: disable=broad-except
+        # Reason: exception re-raised
+        try:
+            self._busy = _Busy(root, widgets)
+            self._busy.__enter__()
+            executor = futures.ThreadPoolExecutor(1, thread_name)
+            future = executor.submit(task, *args, **kwargs)
+            future.add_done_callback(self._done)
+            future.add_done_callback(callback)
+            executor.shutdown(wait=False)
+        except Exception:
+            self._done()
+            raise
+
+    def _done(self, future):
+        """Restore regular cursor.
+
+        Argument:
+            future -- object representing asynchronous execution of task
+                (ignored)
+        """
+        # pylint: disable=broad-except
+        # Reason: exception logged
+        try:
+            self._busy.__exit__(*sys.exc_info())
+        except Exception:
+            _misc_logger.exception(_UNEXPECTED)
 
 
 def run(init_inpath=None, *, init_outpattern=_app.OUTPATTERN,
