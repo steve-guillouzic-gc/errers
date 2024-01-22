@@ -2064,7 +2064,14 @@ class _BackgroundTask:
     The busy cursor is displayed while the task is run.
 
     Attributes:
+        _root -- parent widget
         _busy -- context manager displaying busy cursor
+        _executor -- task executor managing separate thread
+        _future -- object representing asynchronous execution of task
+        _callback -- callable to be executed on normal task completion
+
+    Methods:
+        _monitor -- monitor task progress and cleanup on completion
     """
 
     def __init__(self, root, thread_name, *, task, callback,
@@ -2085,29 +2092,34 @@ class _BackgroundTask:
         """
         # pylint: disable=broad-except
         # Reason: exception re-raised
-        try:
-            self._busy = _Busy(root, widgets)
-            self._busy.__enter__()
-            executor = futures.ThreadPoolExecutor(1, thread_name)
-            future = executor.submit(task, *args, **kwargs)
-            future.add_done_callback(self._done)
-            future.add_done_callback(callback)
-            executor.shutdown(wait=False)
-        except Exception:
-            self._done()
-            raise
+        self._root = root
+        self._busy = _Busy(root, widgets)
+        self._busy.__enter__()
+        self._executor = futures.ThreadPoolExecutor(1, thread_name)
+        self._future = self._executor.submit(task, *args, **kwargs)
+        self._callback = callback
+        root.after(100, self._monitor)
 
-    def _done(self, future):
-        """Restore regular cursor.
+    def _monitor(self):
+        """Monitor task completion.
 
-        Argument:
-            future -- object representing asynchronous execution of task
-                (ignored)
+        On completion, call callback function and restore regular cursor.
         """
         # pylint: disable=broad-except
         # Reason: exception logged
         try:
-            self._busy.__exit__(*sys.exc_info())
+            try:
+                done = True
+                self._future.result(timeout=0)
+            except futures.TimeoutError:
+                self._root.after(100, self._monitor)
+                done = False
+            else:
+                self._callback(self._future)
+            finally:
+                if done:
+                    self._executor.shutdown()
+                    self._busy.__exit__(*sys.exc_info())
         except Exception:
             _misc_logger.exception(_UNEXPECTED)
 
