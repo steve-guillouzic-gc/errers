@@ -190,6 +190,7 @@ class _MainWindow:
         ask_input_file -- prompt user for input file
         start_extraction -- start thread for LaTeX to text extraction
         run_extraction -- extract text from LaTeX file
+        finalize_extraction -- reset GUI and handle exceptions from extraction
         copy_text -- copy text to clipboard
         copy_log -- copy log to clipboard
         start_check -- start thread for grammar check
@@ -201,10 +202,10 @@ class _MainWindow:
     Attributes:
         root -- root widget of window
         log -- text box for standard error log
-        _extractor -- extraction thread
         _interruption -- event to interrupt extraction thread
         _inpath -- path of input file
         _outpattern -- pattern for output file name
+        _outname -- name of output file
         _btn_main -- main row of buttons
         _status -- status bar
         _update -- process waiting to update time in the status bar
@@ -462,37 +463,25 @@ class _MainWindow:
         # pylint: disable=broad-except
         # Reason: exception logged
         try:
+            # Check if input file path is valid.
             if not Path(self._inpath.get()).is_file():
                 tk.messagebox.showerror(title=errers.SHORTNAME + ' Error',
                                         message=_INVALID_INPUT_FILE,
                                         parent=self.root)
                 self._inpath.set(_CLICK_INPUT_FILE)
                 self._status.set(_FILENAME_REQUIRED)
-            else:
-                try:
-                    # Check if pattern for name of output file is valid.
-                    _app.output_file_root(Path(self._inpath.get()),
-                                          self._outpattern.get())
-                except _app.InvalidFilenamePattern as err:
-                    tk.messagebox.showerror(title=errers.SHORTNAME + ' Error',
-                                            message=err,
-                                            parent=self.root)
-                    self._status.set(_INVALID_OUTPUT_FILE)
-                else:
-                    self._interruption = threading.Event()
-                    self._extractor \
-                            = threading.Thread(target=self.run_extraction)
-                    self._extractor.start()
-        except Exception:
-            _misc_logger.exception(_UNEXPECTED)
-
-    def run_extraction(self):
-        """Perform text extraction."""
-        # pylint: disable=broad-except
-        # Reason: exception logged
-        try:
-            outroot = _app.output_file_root(Path(self._inpath.get()),
-                                            self._outpattern.get())
+                return
+            # Check if pattern for name of output file is valid.
+            try:
+                outroot = _app.output_file_root(Path(self._inpath.get()),
+                                                self._outpattern.get())
+            except _app.InvalidFilenamePattern as err:
+                tk.messagebox.showerror(title=errers.SHORTNAME + ' Error',
+                                        message=err,
+                                        parent=self.root)
+                self._status.set(_INVALID_OUTPUT_FILE)
+                return
+            # If applicable, ask if output and log files should be overwritten.
             extensions = ['.txt', '-log.txt']
             if self._options.patterns.get():
                 extensions.append('-patterns.txt')
@@ -522,71 +511,96 @@ class _MainWindow:
                 self.root.focus_set()
             else:
                 extract = True
+            # Perform extraction.
             if extract:
                 self._update = self.root.after(0, self.update_time)
-                with _Busy(self.root):
-                    try:
-                        try:
-                            self._btn_main['extract'].config(
-                                    text='Extracting', state='disabled',
-                                    underline=-1)
-                            self._inpath.lock()
-                            self._outpattern.lock()
-                            self._opt_list.lock()
-                            options = self._options
-                            self._outname = _app.extract_and_save(
-                                    inpath=Path(self._inpath.get()),
-                                    outpattern=self._outpattern.get(),
-                                    patterns=options.patterns.get(),
-                                    steps=options.steps.get(),
-                                    times=options.times.get(),
-                                    trace=options.trace.get(),
-                                    verbose=options.verbose.get(),
-                                    local=not options.nolocal.get(),
-                                    auto=not options.noauto.get(),
-                                    default=not options.nodefault.get(),
-                                    std_re=options.re.get(),
-                                    timeout=options.timeout.get(),
-                                    interruption=self._interruption)
-                            self._btn_main['copy text'].config(
-                                    state='normal')
-                            if 'win32com.client' in sys.modules:
-                                self._btn_main['check'].config(
-                                        state='normal')
-                        except Exception:
-                            self._outname = outroot.with_suffix('.txt')
-                            self._btn_main['extract'].config(
-                                    text='Error', underline=-1)
-                            raise
-                    except (_engine.extractor.EncodingError,
-                            _engine.base.CatastrophicBacktracking) as err:
-                        _misc_logger.error(err)
-                    except _engine.base.RegularExpressionError:
-                        _misc_logger.error('Extraction interrupted by '
-                                           'regular expression error.')
-                    except PermissionError as err:
-                        path = Path(err.filename).resolve()
-                        _misc_logger.error('Cannot write to %s in %s. It may '
-                                           'be open in another application. '
-                                           'If so, please close it and try '
-                                           'again.',
-                                           path.name, path.parent)
-                    except _engine.base.Interruption:
-                        _misc_logger.error(
-                                'Extraction interrupted by user.')
-                    else:
-                        self._btn_main['extract'].config(text='Done',
-                                                         underline=-1)
-                    finally:
-                        self._status.set(self._status.get() + ' (Done)')
-                        self._btn_main['copy log'].config(state='normal')
-                        self._btn_main['reset'].config(state='normal')
-                        self._inpath.unlock()
-                        self._outpattern.unlock()
-                        self._opt_list.unlock()
-                        _app.set_log_stream(self.log)
+                self._btn_main['extract'].config(
+                        text='Extracting', state='disabled',
+                        underline=-1)
+                self._inpath.lock()
+                self._outpattern.lock()
+                self._opt_list.lock()
+                self._interruption = threading.Event()
+                finalize = ft.partial(self.finalize_extraction,
+                                      outroot=outroot)
+                _BackgroundTask(self.root, 'extraction',
+                                task=self.run_extraction,
+                                callback=finalize)
         except Exception:
             _misc_logger.exception(_UNEXPECTED)
+
+    def run_extraction(self):
+        """Perform text extraction."""
+        return _app.extract_and_save(
+                inpath=Path(self._inpath.get()),
+                outpattern=self._outpattern.get(),
+                patterns=self._options.patterns.get(),
+                steps=self._options.steps.get(),
+                times=self._options.times.get(),
+                trace=self._options.trace.get(),
+                verbose=self._options.verbose.get(),
+                local=not self._options.nolocal.get(),
+                auto=not self._options.noauto.get(),
+                default=not self._options.nodefault.get(),
+                std_re=self._options.re.get(),
+                timeout=self._options.timeout.get(),
+                interruption=self._interruption)
+
+    def finalize_extraction(self, future, outroot):
+        """Reset GUI and handle exceptions from extraction.
+
+        Arguments:
+            future -- execution of extraction
+            outroot -- stem of output file name
+        """
+        # pylint: disable=broad-except
+        # Reason: exception logged
+        try:
+            try:
+                try:
+                    self._outname = future.result()
+                    self._btn_main['copy text'].config(
+                            state='normal')
+                    if 'win32com.client' in sys.modules:
+                        self._btn_main['check'].config(
+                                state='normal')
+                except Exception:
+                    self._outname = outroot.with_suffix('.txt')
+                    self._btn_main['extract'].config(
+                            text='Error', underline=-1)
+                    raise
+            except (_engine.extractor.EncodingError,
+                    _engine.base.CatastrophicBacktracking) as err:
+                _misc_logger.error(err)
+            except _engine.base.RegularExpressionError:
+                _misc_logger.error('Extraction interrupted by '
+                                   'regular expression error.')
+            except PermissionError as err:
+                path = Path(err.filename).resolve()
+                _misc_logger.error('Cannot write to %s in %s. It may '
+                                   'be open in another application. '
+                                   'If so, please close it and try '
+                                   'again.',
+                                   path.name, path.parent)
+            except _engine.base.Interruption:
+                _misc_logger.error(
+                        'Extraction interrupted by user.')
+            else:
+                self._btn_main['extract'].config(text='Done',
+                                                 underline=-1)
+            finally:
+                self._status.set(self._status.get() + ' (Done)')
+                self._btn_main['copy log'].config(state='normal')
+                self._btn_main['reset'].config(state='normal')
+                self._inpath.unlock()
+                self._outpattern.unlock()
+                self._opt_list.unlock()
+                _app.set_log_stream(self.log)
+        except Exception:
+            _misc_logger.exception(_UNEXPECTED)
+        finally:
+            # Quitting app is delayed until _interruption event is deleted.
+            del self._interruption
 
     def copy_text(self):
         """Copy text to clipboard."""
@@ -685,8 +699,8 @@ class _MainWindow:
         # pylint: disable=broad-except
         # Reason: exception logged
         try:
-            if hasattr(self, '_extractor') and self._extractor.is_alive():
-                self.root.after(100, self.close)
+            if hasattr(self, '_interruption'):
+                self.root.after(1000, self.close)
             else:
                 _main_logger.handlers.clear()
                 self.root.destroy()
