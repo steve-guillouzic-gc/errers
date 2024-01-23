@@ -18,6 +18,10 @@ Added
 - In Windows, replace "Send To" shortcut by entry in "Open With" menu.
 - Document removal procedure in README file.
 
+Fixed
+-----
+- Consolidate all Tkinter code to main thread.
+
 3.1.1, 2023-12-22
 =================
 
