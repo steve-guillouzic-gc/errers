@@ -1656,7 +1656,6 @@ class _Hyperlink:
         _on_release_right -- event handler when right mouse button released
         _activate -- event handler when cursor enters hyperlink area
         _deactivate -- event handler when cursor leaves hyperlink area
-        _handle_exceptions -- handle exceptions from browser opening
     """
 
     def __init__(self, root, url, text=None):
@@ -1714,7 +1713,6 @@ class _Hyperlink:
                 _BackgroundTask(self._root, 'open_browser',
                                 task=webbrowser.open,
                                 args=(self._url,),
-                                callback=self._handle_exceptions,
                                 widgets=[self._label])
         except Exception:
             _misc_logger.exception(_UNEXPECTED)
@@ -1750,19 +1748,6 @@ class _Hyperlink:
             event -- event details (ignored)
         """
         self._active = False
-
-    def _handle_exceptions(self, future):
-        """Handle exceptions from browser opening.
-
-        Argument:
-            future -- execution of browser opening
-        """
-        # pylint: disable=broad-except
-        # Reason: exception logged
-        try:
-            future.result(timeout=0)
-        except Exception:
-            _misc_logger.exception(_UNEXPECTED)
 
 
 class _LogBox:
@@ -2070,19 +2055,20 @@ class _BackgroundTask:
         _monitor -- monitor task progress and cleanup on completion
     """
 
-    def __init__(self, root, thread_name, *, task, callback,
-                 args=(), kwargs={}, widgets=None):
+    def __init__(self, root, thread_name, *, task, args=(), kwargs={},
+                 callback=None, widgets=None):
         """Initialize background task.
 
         Arguments:
             root -- parent widget
             thread_name -- thread name (for debugging)
             task -- callable to be run in other thread
-            callback -- callable to be called on completion of task, with
-                Future object (from concurrent.futures) as single argument; at 
-                a minimum, it should call future.result and handle exceptions
             args -- positional arguments of task
             kwargs -- keyword arguments of task
+            callback -- callable to be called on completion of task, with
+                Future object (from concurrent.futures) as single argument; must
+                call future.result to trigger exception handling; Future.result
+                is called directly if callback is None
             widgets -- list of widgets for which to show busy cursor (root if
                 None)
         """
@@ -2110,7 +2096,10 @@ class _BackgroundTask:
                 self._root.after(100, self._monitor)
                 return
             try:
-                self._callback(self._future)
+                if self._callback is None:
+                    self._future.result()
+                else:
+                    self._callback(self._future)
             finally:
                 self._executor.shutdown()
                 self._busy.__exit__(*sys.exc_info())
