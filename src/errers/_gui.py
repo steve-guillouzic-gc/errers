@@ -2109,17 +2109,15 @@ class _BackgroundTask:
         # Reason: exception logged
         try:
             try:
-                done = True
-                self._future.result(timeout=0)
+                self._future.exception(timeout=0)
             except futures.TimeoutError:
                 self._root.after(100, self._monitor)
-                done = False
-            else:
+                return
+            try:
                 self._callback(self._future)
             finally:
-                if done:
-                    self._executor.shutdown()
-                    self._busy.__exit__(*sys.exc_info())
+                self._executor.shutdown()
+                self._busy.__exit__(*sys.exc_info())
         except Exception:
             _misc_logger.exception(_UNEXPECTED)
 
