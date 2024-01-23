@@ -44,6 +44,8 @@ Classes (internal):
     _Status -- status bar
     _Busy -- context manager displaying a busy cursor in GUI
     _BackgroundTask -- background task running in another thread
+    _InterProcessError -- exception raised on inter-process communication error
+    _WordNotFoundError -- exception raised when MS Word not found
 
 Functions (internal):
     _dispatch -- return COM object with early-binding, clearing cache if needed
@@ -195,6 +197,7 @@ class _MainWindow:
         copy_log -- copy log to clipboard
         start_check -- start thread for grammar check
         run_check -- launch Microsoft Word and start grammar check
+        finalize_check -- handle exceptions from grammar check
         on_delete -- clean up when window is closed
         close -- close GUI, waiting for extraction interruption if needed
         update_time -- update elapsed time in the status bar
@@ -637,8 +640,8 @@ class _MainWindow:
         # pylint: disable=broad-except
         # Reason: exception logged
         try:
-            self._checker = threading.Thread(target=self.run_check)
-            self._checker.start()
+            _BackgroundTask(self.root, 'document_review',
+                            task=self.run_check, callback=self.finalize_check)
         except Exception:
             _misc_logger.exception(_UNEXPECTED)
 
@@ -646,40 +649,41 @@ class _MainWindow:
         """Launch Microsoft Word and start grammar check."""
         # pylint: disable=broad-except
         # Reason: exception logged
+        constants = win32com.client.constants
+        pywintypes = win32com.client.pywintypes
+        # Initialize COM libraries for this thread.
+        pythoncom.CoInitialize()
         try:
-            constants = win32com.client.constants
-            pywintypes = win32com.client.pywintypes
-            # Initialize COM libraries for this thread.
-            pythoncom.CoInitialize()
-            with _Busy(self.root):
-                try:
-                    shell = _dispatch('Wscript.Shell')
-                except AttributeError:
-                    tk.messagebox.showerror(
-                            title=errers.SHORTNAME + ' Error',
-                            message=_CORRUPT_GEN_PY, parent=self.root)
-                    return
-                try:
-                    word = _dispatch('Word.Application')
-                except AttributeError:
-                    tk.messagebox.showerror(
-                            title=errers.SHORTNAME + ' Error',
-                            message=_CORRUPT_GEN_PY, parent=self.root)
-                    return
-                except pywintypes.com_error:
-                    tk.messagebox.showerror(
-                            title=errers.SHORTNAME + ' Error',
-                            message=_WORD_NOT_FOUND, parent=self.root)
-                    return
-                doc = word.Documents.Open(str(self._outname.resolve()))
-                word.Visible = True
-                shell.AppActivate(doc)
-                if word.WindowState == constants.wdWindowStateMinimize:
-                    word.WindowState = constants.wdWindowStateNormal
-                doc.DetectLanguage()
-                doc.CheckGrammar()
-        except Exception:
-            _misc_logger.exception(_UNEXPECTED)
+            shell = _dispatch('Wscript.Shell')
+        except AttributeError as err:
+            raise _InterProcessError from err
+        try:
+            word = _dispatch('Word.Application')
+        except AttributeError as err:
+            raise _InterProcessError from err
+        except pywintypes.com_error as err:
+            raise _WordNotFoundError from err
+        doc = word.Documents.Open(str(self._outname.resolve()))
+        word.Visible = True
+        shell.AppActivate(doc)
+        if word.WindowState == constants.wdWindowStateMinimize:
+            word.WindowState = constants.wdWindowStateNormal
+        doc.DetectLanguage()
+        doc.CheckGrammar()
+
+    def finalize_check(self, future):
+        """Handle exceptions from grammar check.
+
+        Arguments:
+            future -- execution of grammar check
+        """
+        # pylint: disable=broad-except
+        # Reason: exception logged
+        try:
+            future.result()
+        except (_InterProcessError, _WordNotFoundError) as err:
+            tk.messagebox.showerror(title=errers.SHORTNAME + ' Error',
+                                    message=err, parent=self.root)
 
     def on_delete(self):
         """Clean-up on window closure."""
@@ -2119,6 +2123,30 @@ class _BackgroundTask:
                 self._busy.__exit__(*sys.exc_info())
         except Exception:
             _misc_logger.exception(_UNEXPECTED)
+
+
+class _InterProcessError(Exception):
+    """Exception raised on inter-process communication error
+
+    Methods:
+        __init__: initializer
+    """
+
+    def __init__(self):
+        """Initialize exception."""
+        super().__init__(_CORRUPT_GEN_PY)
+
+
+class _WordNotFoundError(Exception):
+    """Exception raised when MS Word not found
+
+    Methods:
+        __init__: initializer
+    """
+
+    def __init__(self):
+        """Initialize exception."""
+        super().__init__(_WORD_NOT_FOUND)
 
 
 def run(init_inpath=None, *, init_outpattern=_app.OUTPATTERN,
