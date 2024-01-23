@@ -1123,12 +1123,8 @@ class _ShortcutWindow:
         # Reason: exception logged
         try:
             future.result(timeout=0)
-        except Exception:
-            _misc_logger.exception(_UNEXPECTED)
-        try:
+        finally:
             self.root.after(0, self.root.destroy)
-        except Exception:
-            _misc_logger.exception(_UNEXPECTED)
 
     def update_windows_open_with(self, delete):
         """Add to, or remove from, "Open With" menu on Windows platform.
