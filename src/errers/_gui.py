@@ -524,30 +524,72 @@ class _MainWindow:
                 self._outpattern.lock()
                 self._opt_list.lock()
                 self._interruption = threading.Event()
+                kwargs = dict(inpath=Path(self._inpath.get()),
+                              outpattern=self._outpattern.get(),
+                              patterns=self._options.patterns.get(),
+                              steps=self._options.steps.get(),
+                              times=self._options.times.get(),
+                              trace=self._options.trace.get(),
+                              verbose=self._options.verbose.get(),
+                              local=not self._options.nolocal.get(),
+                              auto=not self._options.noauto.get(),
+                              default=not self._options.nodefault.get(),
+                              std_re=self._options.re.get(),
+                              timeout=self._options.timeout.get(),
+                              interruption=self._interruption)
                 finalize = ft.partial(self.finalize_extraction,
                                       outroot=outroot)
                 _BackgroundTask(self.root, 'extraction',
                                 task=self.run_extraction,
+                                kwargs=kwargs,
                                 callback=finalize)
         except Exception:
             _misc_logger.exception(_UNEXPECTED)
 
-    def run_extraction(self):
-        """Perform text extraction."""
-        return _app.extract_and_save(
-                inpath=Path(self._inpath.get()),
-                outpattern=self._outpattern.get(),
-                patterns=self._options.patterns.get(),
-                steps=self._options.steps.get(),
-                times=self._options.times.get(),
-                trace=self._options.trace.get(),
-                verbose=self._options.verbose.get(),
-                local=not self._options.nolocal.get(),
-                auto=not self._options.noauto.get(),
-                default=not self._options.nodefault.get(),
-                std_re=self._options.re.get(),
-                timeout=self._options.timeout.get(),
-                interruption=self._interruption)
+    def run_extraction(self, *, inpath, outpattern, patterns, steps, times,
+                       trace, verbose, auto, default, local,
+                       std_re, timeout, interruption):
+        """Perform text extraction.
+
+        Arguments:
+            inpath -- path of input file (LaTeX)
+            outpattern -- pattern for name of output file (text)
+            patterns -- whether to print expanded patterns to patterns file
+            steps -- whether to print text to steps file after each rule
+            times -- whether to save compilation and run times of regular
+                expressions to a CSV file (OUTNAME-times.csv)
+            trace -- whether to list patterns and rules to trace file as they
+                are run
+            verbose -- whether to propagate informational message to the main
+                log (if False, only warning and error messages are relayed)
+            auto -- whether to define rules automatically for LaTeX commands
+                defined in document using \newcommand, \renewcommand,
+                \providecommand, \def, \edef, \gdef and \xdef
+            default -- whether to apply default rules
+            local -- whether to apply local rules
+            std_re -- whether to use standard re module even when regex module
+                is available
+            timeout -- timeout for individual search patterns and substitution
+                rules to detect likely catastrophic backtracking
+            interruption -- event originating from the main thread indicating
+                that the extraction thread must terminate
+
+        Returns:
+            name of output file as Path object
+        """
+        return _app.extract_and_save(inpath=inpath,
+                                     outpattern=outpattern,
+                                     patterns=patterns,
+                                     steps=steps,
+                                     times=times,
+                                     trace=trace,
+                                     verbose=verbose,
+                                     local=local,
+                                     auto=auto,
+                                     default=default,
+                                     std_re=std_re,
+                                     timeout=timeout,
+                                     interruption=interruption)
 
     def finalize_extraction(self, future, outroot):
         """Reset GUI and handle exceptions from extraction.
@@ -1110,26 +1152,29 @@ class _ShortcutWindow:
         # pylint: disable=broad-except
         # Reason: exception logged
         try:
+            updaters = [updater
+                        for checkbox, updater in zip(self._checkboxes, 
+                                                     self._updaters.values())
+                        if checkbox.get()]
             _BackgroundTask(self.root, 'update_shortcuts',
                             task=self.update,
-                            args=(delete,),
+                            args=(updaters, delete),
                             callback=self.finalize_update)
         except Exception:
             _misc_logger.exception(_UNEXPECTED)
 
-    def update(self, delete):
+    def update(self, updaters, delete):
         """Create or delete selected shortcuts.
 
         Argument:
+            updaters -- updater functions to run
             delete -- delete rather than create or update shortcut
         """
         # pylint: disable=broad-except
         # Reason: exception logged
-        for checkbox, function in zip(self._checkboxes,
-                                      self._updaters.values()):
-            if checkbox.get():
-                if not function(self, delete=delete):
-                    break
+        for updater in updaters:
+            if not updater(self, delete=delete):
+                break
 
     def finalize_update(self, future):
         """Finalize update by closing window and handling exceptions.
