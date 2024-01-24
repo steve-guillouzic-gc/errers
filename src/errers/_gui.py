@@ -56,6 +56,7 @@ __all__ = ['run']
 from concurrent import futures
 import ctypes
 import functools as ft
+import gc
 import logging
 import os
 from pathlib import Path
@@ -2164,6 +2165,9 @@ class _BackgroundTask:
         self._root = root
         self._busy = _Busy(root, widgets)
         self._busy.__enter__()
+        # Manually trigger garbage collection to avoid Tkinter objects being 
+        # garbage collected in another thread.
+        gc.collect()
         self._executor = futures.ThreadPoolExecutor(1, thread_name)
         self._future = self._executor.submit(task, *args, **kwargs)
         self._callback = callback
