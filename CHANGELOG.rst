@@ -21,6 +21,7 @@ Added
 Fixed
 -----
 - Consolidate all Tkinter code to main thread.
+- Avoid garbage collection of Tkinter objects in non-main threads.
 
 3.1.1, 2023-12-22
 =================
