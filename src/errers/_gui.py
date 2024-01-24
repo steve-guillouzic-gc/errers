@@ -61,6 +61,7 @@ import os
 from pathlib import Path
 import platform
 import plistlib
+import queue
 import shutil
 import stat
 import subprocess as sp
@@ -1821,14 +1822,17 @@ class _LogBox:
 
     Methods:
         __init__ -- initializer
-        write -- append string to text box
-        flush -- update text box content immediately
+        write -- queue string for addition to text box
+        _monitor_queue -- periodically check queue and write text to text box
+        flush -- do nothing, as flushing is done automatically after writing
         get -- return value of text box
         reset -- delete text box content
         row -- return row index of location in grid
 
     Attribute:
+        _root -- parent widget
         _text -- Tk Text object
+        _queue -- thread-safe queue object for text to be written to text box
     """
 
     def __init__(self, root, width, height):
@@ -1841,6 +1845,7 @@ class _LogBox:
             width -- initial width of text field
             height -- initial height of text field
         """
+        self._root = root
         # Create text box and scroll bar
         self._text = tk.Text(root, width=width, height=height,
                              state='disabled', cursor='', wrap=tk.WORD)
@@ -1854,24 +1859,44 @@ class _LogBox:
         indent = font.measure('CRITICAL - ')
         self._text.tag_configure('first', lmargin2=indent)
         self._text.tag_configure('other', lmargin1=indent, lmargin2=indent)
+        # Create queue for inter-thread communication and schedule monitoring
+        # task
+        self._queue = queue.SimpleQueue()
+        root.after(0, self._monitor_queue)
 
     def write(self, string):
-        """Append string to text box.
+        """Append string to queue, for addition to text box.
 
         Argument:
             string -- string to be appended
         """
-        lines = string.splitlines(keepends=True)
-        self._text.config(state='normal')
-        self._text.insert('end', lines[0], 'first')
-        for line in lines[1:]:
-            self._text.insert('end', line, 'other')
-        self._text.config(state='disabled')
-        self._text.see('end')
+        self._queue.put(string)
+
+    def _monitor_queue(self):
+        """Append strings from queue to text box.
+
+        Called periodically.
+        """
+        try:
+            while True:
+                string = self._queue.get(block=False)
+                lines = string.splitlines(keepends=True)
+                self._text.config(state='normal')
+                self._text.insert('end', lines[0], 'first')
+                for line in lines[1:]:
+                    self._text.insert('end', line, 'other')
+                self._text.config(state='disabled')
+                self._text.see('end')
+        except queue.Empty:
+            self._text.update_idletasks()
+            self._root.after(100, self._monitor_queue)
 
     def flush(self):
-        """Update text box content immediately."""
-        self._text.update_idletasks()
+        """Do nothing, as flushing is done automatically after writing.
+
+        Required for stdout/stderr interface.
+        """
+        pass
 
     def get(self):
         """Return value of text box."""
@@ -1886,7 +1911,6 @@ class _LogBox:
     def row(self):
         """Return row index of location in grid."""
         return self._text.grid_info()['row']
-
 
 class _CheckBox:
     """Check box in GUI.
