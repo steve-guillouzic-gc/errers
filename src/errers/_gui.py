@@ -18,9 +18,10 @@ The following elements are internal elements of the module.
 
 Constants: text
     _UNEXPECTED, _UNEXPECTED_MESSAGE, _UNEXPECTED_DETAIL, _WORD_NOT_FOUND,
-    _CORRUPT_GEN_PY, _INVALID_INPUT_FILE, _FILENAME_REQUIRED, _DESCRIPTION,
-    _MANUAL, _FEEDBACK, _CONTACT, _CONTACT_URL, _NOTE_URL, _NOTE_COPY,
-    _CLICK_INPUT_FILE, _DEBUGGING
+    _CORRUPT_GEN_PY, _INVALID_INPUT_FILE, _INVALID_OUTPUT_FILE,
+    _FILENAME_REQUIRED, _DESCRIPTION, _MANUAL, _FEEDBACK, _ALTERNATE, _CONTACT,
+    _ISSUES, _ISSUES_URL, _CONTACT, _CONTACT_URL, _NOTE_COPY,
+    _CLICK_INPUT_FILE, _DEBUGGING, _FILTERED, _MACOS14, _LANGUAGE_VARIANTS
 
 Constants: logging
     _main_logger -- parent logger to all ERRERS loggers
@@ -30,6 +31,7 @@ Classes (internal):
     _MainWindow -- main GUI window
     _HelpWindow -- window for help text
     _OptionsWindow -- window for specifying options
+    _LanguageWindow -- window for specifying language variants in document
     _ShortcutWindow -- window for shortcut creation and deletion
     _SectionLabel -- section label in GUI
     _SubSectionLabel -- sub-section label in GUI
@@ -39,6 +41,7 @@ Classes (internal):
     _Hyperlink -- centred hyperlink
     _LogBox -- multi-line text box in GUI for logging purposes
     _CheckBox -- checkbox in GUI
+    _OptionList -- drop-down list in GUI
     _Spacer -- spacer widget in GUI
     _ButtonRow -- row of buttons in GUI
     _Status -- status bar
@@ -46,6 +49,9 @@ Classes (internal):
     _BackgroundTask -- background task running in another thread
     _InterProcessError -- exception raised on inter-process communication error
     _WordNotFoundError -- exception raised when MS Word not found
+    _ModalDialogError -- exception raised when a dialog box makes MS Word
+        unresponsive
+    _Language -- interface to language name from MS Word
 
 Functions (internal):
     _dispatch -- return COM object with early-binding, clearing cache if needed
@@ -53,6 +59,7 @@ Functions (internal):
 
 __all__ = ['run']
 
+from collections import defaultdict
 from concurrent import futures
 import ctypes
 import functools as ft
@@ -88,6 +95,7 @@ except ModuleNotFoundError:
 try:
     import pythoncom
     import win32com.client
+    import win32gui
 except ModuleNotFoundError:
     pass
 
@@ -113,6 +121,8 @@ _UNEXPECTED_MESSAGE = 'Unexpected error'
 _UNEXPECTED_DETAIL = ('Details written to console window. '
                       'Please report to developer.')
 _WORD_NOT_FOUND = 'Microsoft Word not found'
+_MODAL_DIALOG = ('A dialog box opened in Microsoft Word makes it '
+                 'unresponsive. Please close the dialog box and try again.')
 _CORRUPT_GEN_PY = ('Inter-process communication error: clearing cache to '
                    'resolve issue. Please restart application and try again.')
 _INVALID_INPUT_FILE = 'Invalid input file'
@@ -167,6 +177,9 @@ _MACOS14 = textwrap.fill(textwrap.dedent(f"""\
         unresponsiveness bug if upgrading Python is not an option: the first is
         to use keyboard shortcuts, and the second one is to move the window
         (which reactivates the buttons)."""), width=1000)
+_LANGUAGE_VARIANTS = textwrap.dedent(f"""\
+        Microsoft Word detected the following languages. Where multiple
+        variants are available, please select which one to apply.""")
 
 
 class _MainWindow:
@@ -292,12 +305,12 @@ class _MainWindow:
                                self.start_check, 'disabled'))
         self._btn_main = _ButtonRow(controls, buttons)
         _Spacer(controls)
-        _Description(controls, 100, _NOTE_COPY)
+        _Description(controls, 2, 100, _NOTE_COPY)
         _Spacer(controls, fill=True)
         controls.grid_columnconfigure(1, weight=1)
         # Extraction log
         _SectionLabel(log, 'Extraction log')
-        _Description(log, 100, _FILTERED)
+        _Description(log, 2, 100, _FILTERED)
         self.log = _LogBox(log, 60, 15)
         log.grid_rowconfigure(2, weight=1)
         log.grid_columnconfigure(0, weight=1)
@@ -684,13 +697,23 @@ class _MainWindow:
         # pylint: disable=broad-except
         # Reason: exception logged
         try:
+            q_detected = queue.SimpleQueue()
+            q_selected = queue.SimpleQueue()
             _BackgroundTask(self.root, 'document_review',
-                            task=self.run_check, callback=self.finalize_check)
+                            task=self.run_check,
+                            args=(q_detected, q_selected),
+                            callback=self.finalize_check)
+            self.root.after(0, self.wait_for_languages, q_detected, q_selected)
         except Exception:
             _misc_logger.exception(_UNEXPECTED)
 
-    def run_check(self):
-        """Launch Microsoft Word and start grammar check."""
+    def run_check(self, q_detected, q_selected):
+        """Launch Microsoft Word and start grammar check.
+
+        Arguments:
+            q_detected -- Queue object for detected languages
+            q_selected -- Queue object for selected language variants
+        """
         # pylint: disable=broad-except
         # Reason: exception logged
         constants = win32com.client.constants
@@ -707,13 +730,94 @@ class _MainWindow:
             raise _InterProcessError from err
         except pywintypes.com_error as err:
             raise _WordNotFoundError from err
-        doc = word.Documents.Open(str(self._outname.resolve()))
-        word.Visible = True
-        shell.AppActivate(doc)
-        if word.WindowState == constants.wdWindowStateMinimize:
-            word.WindowState = constants.wdWindowStateNormal
-        doc.DetectLanguage()
-        doc.CheckGrammar()
+        # Product language variant
+        word_lang_id= word.International(constants.wdProductLanguageID)
+        word_lang_variant \
+                = _Language(word.Languages(word_lang_id).NameLocal).variant
+        # Dictionary languages known to Word
+        dic_names = defaultdict(list)
+        for dic_lang in word.Languages:
+            lang = _Language(dic_lang.NameLocal)
+            if lang.base:
+                dic_names[lang.base].append(lang.full)
+        # Check for dialog boxes that would block document from opening.
+        windows = word.Windows
+        if (windows.Count and not win32gui.IsWindowEnabled(windows(1).Hwnd)):
+            raise _ModalDialogError()
+        try:
+            # Load document and detect languages.
+            doc = word.Documents.Open(str(self._outname.resolve()),
+                                      Visible=False)
+            doc.DetectLanguage()
+            doc_lang_ids = {para.Range.LanguageID for para in doc.Paragraphs}
+            doc_langs = {word.Languages(lang_id).NameLocal
+                         for lang_id in doc_lang_ids
+                         if lang_id != constants.wdUndefined}
+            # Prepare language lists for option menus.
+            menu_langs = []
+            for doc_lang in sorted(doc_langs):
+                lang_detected = _Language(doc_lang)
+                lang_variants = sorted(dic_names[lang_detected.base])
+                try:
+                    lang_default \
+                            = word.Languages('%s (%s)'
+                                             % (lang_detected.base,
+                                             word_lang_variant)).NameLocal
+                except pywintypes.com_error:
+                    lang_default = doc_lang
+                menu_langs.append((doc_lang, lang_variants, lang_default))
+            # Report on detected languages.
+            q_detected.put(menu_langs)
+            # Wait for selection of language variants.
+            lang_mapping = q_selected.get()
+            if lang_mapping is not None:  # None means "cancel check".
+                # Apply selected language variants.
+                id_mapping = {word.Languages(detected).ID:
+                              word.Languages(selected).ID
+                              for detected, selected in lang_mapping}
+                id_mapping[constants.wdUndefined] = constants.wdUndefined
+                for para in doc.Paragraphs:
+                    para.Range.LanguageID = id_mapping[para.Range.LanguageID]
+                # Show document and launch review.
+                doc.Windows(1).Visible = True
+                shell.AppActivate(doc)
+                try:
+                    # Try modern Editor sidebar first.
+                    mso = "WritingAssistanceCheckDocument"
+                    doc.CommandBars.ExecuteMso(mso)
+                except pywintypes.com_error:
+                    # Use old spelling and grammar checker as backup.
+                    doc.CheckGrammar()
+        finally:
+            # On exception or cancellation: close document.
+            if not doc.Windows(1).Visible:
+                doc.Close(SaveChanges=constants.wdDoNotSaveChanges)
+                if not word.Documents:
+                    word.Quit()
+
+    def wait_for_languages(self, q_detected, q_selected):
+        """Open language selection window once detected languages are known.
+
+        Arguments:
+            q_detected -- Queue object for detected languages
+            q_selected -- Queue object for selected language variants
+        """
+        # pylint: disable=broad-except
+        # Reason: exception logged
+        try:
+            try:
+                detected = q_detected.get(block=False)
+            except queue.Empty:
+                self.root.after(100, self.wait_for_languages,
+                                 q_detected, q_selected)
+            else:
+                lang_window = _LanguageWindow(detected, q_selected)
+                lang_window.transient(self.root)
+                lang_window.update_idletasks()
+                lang_window.focus_set()
+                lang_window.grab_set()
+        except Exception:
+            _misc_logger.exception(_UNEXPECTED)
 
     def finalize_check(self, future):
         """Handle exceptions from grammar check.
@@ -725,7 +829,8 @@ class _MainWindow:
         # Reason: exception logged
         try:
             future.result()
-        except (_InterProcessError, _WordNotFoundError) as err:
+        except (_InterProcessError, _WordNotFoundError, 
+                _ModalDialogError) as err:
             tk.messagebox.showerror(title=errers.SHORTNAME + ' Error',
                                     message=err, parent=self.root)
 
@@ -787,13 +892,13 @@ class _HelpWindow(tk.Toplevel):
         _Spacer(description)
         description.grid(row=0, column=0, sticky='news')
         for desc in _DESCRIPTION:
-            _Description(description, width, desc)
+            _Description(description, 2, width, desc)
         _Hyperlink(description, _MANUAL)
-        _Description(description, width, _FEEDBACK)
+        _Description(description, 2, width, _FEEDBACK)
         _Hyperlink(description, _ISSUES_URL, _ISSUES)
-        _Description(description, width, _ALTERNATE)
+        _Description(description, 2, width, _ALTERNATE)
         _Hyperlink(description, _CONTACT_URL, _CONTACT)
-        _Description(description, width, _NOTE_URL)
+        _Description(description, 2, width, _NOTE_URL)
         buttons = [('ok', 'Ok', 0, self.destroy, 'normal')]
         _ButtonRow(description, buttons)
         # Keyboard shortcuts
@@ -859,7 +964,7 @@ class _OptionsWindow(tk.Toplevel):
         controls = ttk.Frame(self)
         controls.grid(row=0, column=0, sticky='news')
         _Spacer(controls)
-        _Description(controls, 100, _DEBUGGING)
+        _Description(controls, 2, 100, _DEBUGGING)
         _SectionLabel(controls, 'Logging')
         self.patterns = _CheckBox(controls, init_patterns, 'Patterns: print '
                                   'expanded patterns to %o-patterns.txt '
@@ -880,7 +985,7 @@ class _OptionsWindow(tk.Toplevel):
         self.verbose = _CheckBox(controls, init_verbose, 'Verbose: print '
                                  'additional information to extraction log '
                                  'in the main window', underline=0)
-        _Description(controls, 100, 'Note: %o = name of output file',
+        _Description(controls, 2, 100, 'Note: %o = name of output file',
                      pady=(5, 0))
         _SectionLabel(controls, 'Substitution rules')
         self.noauto = _CheckBox(controls, not init_auto, 'No auto: omit '
@@ -982,6 +1087,96 @@ class _OptionsWindow(tk.Toplevel):
         return ', '.join(options)
 
 
+class _LanguageWindow(tk.Toplevel):
+    """Window for specifying language variants in document.
+
+    Attributes:
+        _q_selected -- Queue object for reporting selected language variants
+
+    Methods:
+        __init__ -- initializer
+        on_cancel -- cancel document review
+        on_ok -- apply selected langauges and review document
+    """
+
+    def __init__(self, detected, q_selected, *args, **kwargs):
+        """Initialize language window.
+
+        Arguments:
+            detected -- sequence of triplets, where the first element of each
+                triplet is the language variant detected by MS Word, the second
+                element is the list of variants recognized by Word, and the
+                third element is the initial value of the drop-down list
+            q_selected -- Queue object for selected language variants
+        """
+        super().__init__(*args, **kwargs)
+        self._q_selected = q_selected
+        self.resizable(False, False)
+        self.title('%s Language Variants' % errers.SHORTNAME)
+        window = ttk.Frame(self)
+        window.grid(row=0, column=0, sticky='news')
+        _Description(window, 3, 90, _LANGUAGE_VARIANTS)
+        window.grid_columnconfigure(0, weight=1)
+        window.grid_columnconfigure(2, weight=1)
+        # List of languages
+        languages = ttk.Frame(window)
+        languages.grid(row=1, column=1)
+        # Column headers
+        bold = tk.font.nametofont('TkDefaultFont').copy()
+        bold.configure(weight='bold', size=bold.cget('size') + 2)
+        header1 = ttk.Label(languages, text='Detected', font=bold)
+        header2 = ttk.Label(languages, text='Selected', font=bold)
+        header1.grid(row=0, column=0, padx=5, pady=5)
+        header2.grid(row=0, column=1, padx=5, pady=5)
+        # Languages
+        self._languages = {}
+        for lang_doc, lang_variants, lang_default in detected:
+            lang_variants = lang_variants.copy()
+            lang_variants.remove(lang_doc)
+            lang_variants.insert(0, lang_doc)
+            if lang_default == lang_doc:
+                separator = 1
+            else:
+                lang_variants.remove(lang_default)
+                lang_variants.insert(0, lang_default)
+                separator = 2
+            self._languages[lang_doc] \
+                    = _OptionList(languages, lang_doc, lang_variants,
+                                  initial=lang_default, separators=[separator])
+        # Buttons
+        _Spacer(languages)
+        buttons = [('ok', 'Ok', 0, self.on_ok, 'normal'),
+                   ('cancel', 'Cancel', 0, self.on_cancel, 'normal')]
+        _ButtonRow(languages, buttons)
+        # Keyboard shortcuts
+        self.bind(f'<{MOD_KEY}-o>', lambda e: self.on_ok())
+        self.bind(f'<{MOD_KEY}-c>', lambda e: self.on_cancel())
+        self.bind('<Return>', lambda e: self.on_apply())
+        self.bind('<Escape>', lambda e: self.on_cancel())
+
+    def on_cancel(self):
+        """Cancel document review."""
+        # pylint: disable=broad-except
+        # Reason: exception logged
+        try:
+            self._q_selected.put(None)
+            self.destroy()
+        except Exception:
+            _misc_logger.exception(_UNEXPECTED)
+
+    def on_ok(self):
+        """Apply selected languages and review document."""
+        # pylint: disable=broad-except
+        # Reason: exception logged
+        try:
+            mapping = [(detected, selected.get())
+                       for detected, selected in self._languages.items()]
+            self._q_selected.put(mapping)
+            self.destroy()
+        except Exception:
+            _misc_logger.exception(_UNEXPECTED)
+
+
 class _ShortcutWindow:
     """Window for shortcut creation and deletion.
 
@@ -1027,12 +1222,12 @@ class _ShortcutWindow:
         frame = ttk.Frame(self.root)
         frame.grid(row=0, column=0, ipadx=5, sticky='news')
         _SectionLabel(frame, 'Shortcut creation and deletion')
-        _Description(frame, 85, textwrap.dedent("""\
+        _Description(frame, 2, 85, textwrap.dedent("""\
             Creating shortcuts is optional, but it streamlines usage by
             providing a simple way to launch the tool and allowing
             drag-and-drop. """))
-        _Description(frame, 85, message)
-        _Description(frame, 85, textwrap.dedent("""\
+        _Description(frame, 2, 85, message)
+        _Description(frame, 2, 85, textwrap.dedent("""\
             Which application shortcuts would you like to create or delete?
             (Creating shortcuts that already exist updates them to point to
             this %s installation.)""" % errers.SHORTNAME))
@@ -1691,17 +1886,18 @@ class _Description:
         __init__ -- initializer
     """
 
-    def __init__(self, root, width, text, pady=(0, 5)):
+    def __init__(self, root, span, width, text, pady=(0, 5)):
         """Initialize description box.
 
         Arguments:
             root -- parent widget
+            span -- number of columns spanned by widget
             width -- width to which text must be wrapped
             text -- description text
         """
         label = ttk.Label(root, text=textwrap.fill(text, width=width))
         row = root.grid_size()[1]
-        label.grid(row=row, column=0, columnspan=2, padx=5, pady=pady,
+        label.grid(row=row, column=0, columnspan=span, padx=5, pady=pady,
                    sticky='news')
 
 
@@ -1913,6 +2109,7 @@ class _LogBox:
         """Return row index of location in grid."""
         return self._text.grid_info()['row']
 
+
 class _CheckBox:
     """Check box in GUI.
 
@@ -1977,6 +2174,47 @@ class _CheckBox:
     def disable(self):
         """Disable checkbox if enabled."""
         self._widget.configure(state='disabled')
+
+
+class _OptionList:
+    """Option menu in GUI.
+
+    Note: assumes a 2-column grid.
+
+    Methods:
+        __init__ -- initializer
+        get -- return value of option list
+
+    Attributes:
+        _variable -- variable tied to option list
+        _widget -- option list widget
+    """
+
+    def __init__(self, root, label, values, initial, separators):
+        """Initialize option list.
+
+        Arguments:
+            root -- parent widget
+            label -- label of option list
+            values -- values in list
+            initial -- value selected initially
+            separators -- indices of separator positions in list
+        """
+        self._variable = tk.StringVar()
+        self._variable.set(initial)
+        label = ttk.Label(root, text=label)
+        self._widget = ttk.OptionMenu(root, self._variable, initial, *values)
+        for sep in separators:
+            self._widget['menu'].insert_separator(sep)
+        row = root.grid_size()[1]
+        label.grid(row=row, column=0, padx=5, sticky='w')
+        self._widget.grid(row=row, column=1, padx=5, sticky='w')
+        if len(values) == 1:
+            self._widget.configure(state='disabled')
+
+    def get(self):
+        """Return selected value."""
+        return self._variable.get()
 
 
 class _Spacer:
@@ -2202,7 +2440,7 @@ class _InterProcessError(Exception):
     """Exception raised on inter-process communication error
 
     Methods:
-        __init__: initializer
+        __init__ -- initializer
     """
 
     def __init__(self):
@@ -2214,12 +2452,51 @@ class _WordNotFoundError(Exception):
     """Exception raised when MS Word not found
 
     Methods:
-        __init__: initializer
+        __init__ -- initializer
     """
 
     def __init__(self):
         """Initialize exception."""
         super().__init__(_WORD_NOT_FOUND)
+
+
+class _ModalDialogError(Exception):
+    """Exceptions raised when Word is unresponsive due to an open dialog box.
+
+    Methods:
+        __init__ -- initializer
+    """
+
+    def __init__(self):
+        super().__init__(_MODAL_DIALOG)
+
+
+class _Language:
+    """Interface to language name from MS Word
+
+    Attributes:
+        full -- full name (base + variant)
+        base -- base name (e.g., French or English)
+        variant -- language variant (e.g., Canada)
+
+    Methods:
+        __init__ -- initializer
+    """
+
+    def __init__(self, local_name):
+        """Initialize language
+
+        Arguments:
+            local_name -- local name provided by MS Word
+        """
+        try:
+            self.full = local_name
+            base, variant = self.full.split('(', maxsplit=1)
+            self.base = base[:-1]
+            self.variant = variant[0:-1]
+        except ValueError:
+            self.base = self.full
+            self.variant = None
 
 
 def run(init_inpath=None, *, init_outpattern=_app.OUTPATTERN,

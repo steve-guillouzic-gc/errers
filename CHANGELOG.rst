@@ -15,13 +15,19 @@ ERRERS: Change Log
 Added
 -----
 - Add "Delete" button to shortcut window.
-- In Windows, replace "Send To" shortcut by entry in "Open With" menu.
+- On Windows, replace "Send To" shortcut by entry in "Open With" menu.
+- On Windows, when clicking the "Check" button, provide option to change
+  language variants -- for instance English (Canada) vs. English (U.S.).
+- On Windows, when clicking the "Check" button, open the modern Editor tool if
+  available, defaulting back to the old grammar and spell checker if not.
 - Document removal procedure in README file.
 
 Fixed
 -----
 - Consolidate all Tkinter code to main thread.
 - Avoid garbage collection of Tkinter objects in non-main threads.
+- On Windows, check if a modal dialog box is open in Word before trying to open
+  the text file.
 
 3.1.1, 2023-12-22
 =================
