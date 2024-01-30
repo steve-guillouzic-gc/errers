@@ -1264,12 +1264,13 @@ class _ShortcutWindow:
             updaters['Start menu' ] = ft.partial(cls.update_windows_other,
                                                  folder_name='StartMenu')
         message = textwrap.dedent(f"""\
-            For instance, dragging a LaTeX file and dropping it on a desktop
-            shortcut launches the application GUI with the input file path
-            already filled out. Right-clicking on a LaTeX file and choosing
-            {errers.SHORTNAME} under the "Open With" submenu does the same
-            thing. (Creating shortcuts on the Desktop or in the Start Menu
-            requires the pywin32 package.)""")
+            For instance, right-clicking on a LaTeX file and choosing
+            {errers.SHORTNAME} under the "Open With" submenu launches the
+            application GUI with the input file path already filled out. """)
+        if 'win32com.client' in sys.modules:
+            message += textwrap.dedent(f"""\
+                Dragging a LaTeX file and dropping it on a desktop shortcut
+                does the same thing.""")
         return cls(root, updaters, message)
 
     @classmethod
