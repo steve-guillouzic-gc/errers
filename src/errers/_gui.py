@@ -1255,17 +1255,21 @@ class _ShortcutWindow:
         Attribute:
             root -- root widget of window
         """
-        updaters = {'Desktop': ft.partial(cls.update_windows_other,
-                                          folder_name='Desktop'),
-                    'Open With menu': cls.update_windows_open_with,
-                    'Start menu': ft.partial(cls.update_windows_other,
-                                             folder_name='StartMenu')}
+        updaters = {}
+        if 'win32com.client' in sys.modules:
+            updaters['Desktop'] = ft.partial(cls.update_windows_other,
+                                             folder_name='Desktop')
+        updaters['Open With menu'] =  cls.update_windows_open_with
+        if 'win32com.client' in sys.modules:
+            updaters['Start menu' ] = ft.partial(cls.update_windows_other,
+                                                 folder_name='StartMenu')
         message = textwrap.dedent(f"""\
             For instance, dragging a LaTeX file and dropping it on a desktop
             shortcut launches the application GUI with the input file path
             already filled out. Right-clicking on a LaTeX file and choosing
-            {errers.SHORTNAME} under the "Send To" submenu does the same
-            thing.""")
+            {errers.SHORTNAME} under the "Open With" submenu does the same
+            thing. (Creating shortcuts on the Desktop or in the Start Menu
+            requires the pywin32 package.)""")
         return cls(root, updaters, message)
 
     @classmethod
@@ -2572,12 +2576,7 @@ def update_shortcuts():
     # Reason: exception logged
     _app.set_log_stream(sys.stderr)
     if platform.system() == 'Windows':
-        if 'win32com.client' in sys.modules:
-            sw_init = _ShortcutWindow.for_windows
-        else:
-            _misc_logger.error('On Microsoft Windows, shortcut update '
-                               'requires the pywin32 package.')
-            return
+        sw_init = _ShortcutWindow.for_windows
     elif platform.system() == 'Darwin':
         sw_init = _ShortcutWindow.for_macos
     else:

@@ -21,7 +21,8 @@ Added
 
 Changed
 -------
-- On Windows, replace "Send To" shortcut by entry in "Open With" menu.
+- On Windows, replace "Send To" shortcut by entry in "Open With" menu. Creating
+  the latter does not require the pywin32 package.
 - On Windows, when clicking the "Check" button, open the modern Editor tool if
   available, defaulting back to the old grammar and spell checker if not.
 
