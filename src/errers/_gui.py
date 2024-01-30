@@ -778,9 +778,10 @@ class _MainWindow:
                 id_mapping[constants.wdUndefined] = constants.wdUndefined
                 for para in doc.Paragraphs:
                     para.Range.LanguageID = id_mapping[para.Range.LanguageID]
-                # Show document and launch review.
+                # Show document, reset status bar, and launch review.
                 doc.Windows(1).Visible = True
                 shell.AppActivate(doc)
+                word.StatusBar = False
                 try:
                     # Try modern Editor sidebar first.
                     mso = "WritingAssistanceCheckDocument"

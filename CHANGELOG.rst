@@ -27,8 +27,9 @@ Changed
 
 Fixed
 -----
-- On Windows, check if a modal dialog box is open in Word before trying to open
-  the text file.
+- On Windows, check if a modal dialog box is open in Word before trying to
+  import text file.
+- On Windows, reset Word status bar after importing text file.
 - Consolidate all Tkinter code to main thread.
 - Avoid garbage collection of Tkinter objects in non-main threads.
 
