@@ -170,14 +170,14 @@ _FILTERED = ('Unless the verbose option is selected, only warnings and errors '
              'appear below, and informational messages are only saved to the '
              'log file. The log below may be empty after uneventful '
              'extractions.')
-_MACOS14 = textwrap.fill(textwrap.dedent(f"""\
+_MACOS14 = textwrap.fill(textwrap.dedent("""\
         Starting with macOS 14, it is preferable to use Python 3.11.7 or more
         recent, as buttons may become unresponsive with the version of Tkinter
         included in earlier versions. There are two workarounds for the
         unresponsiveness bug if upgrading Python is not an option: the first is
         to use keyboard shortcuts, and the second one is to move the window
         (which reactivates the buttons)."""), width=1000)
-_LANGUAGE_VARIANTS = textwrap.dedent(f"""\
+_LANGUAGE_VARIANTS = textwrap.dedent("""\
         Microsoft Word detected the following languages. Where multiple
         variants are available, please select which one to apply.""")
 
@@ -570,7 +570,7 @@ class _MainWindow:
     def run_extraction(self, *, inpath, outpattern, patterns, steps, times,
                        trace, verbose, auto, default, local,
                        std_re, timeout, interruption):
-        """Perform text extraction.
+        r"""Perform text extraction.
 
         Arguments:
             inpath -- path of input file (LaTeX)
@@ -720,8 +720,6 @@ class _MainWindow:
             q_detected -- Queue object for detected languages
             q_selected -- Queue object for selected language variants
         """
-        # pylint: disable=broad-except
-        # Reason: exception logged
         constants = win32com.client.constants
         pywintypes = win32com.client.pywintypes
         # Initialize COM libraries for this thread.
@@ -737,9 +735,9 @@ class _MainWindow:
         except pywintypes.com_error as err:
             raise _WordNotFoundError from err
         # Product language variant
-        word_lang_id= word.International(constants.wdProductLanguageID)
+        word_lang_id = word.International(constants.wdProductLanguageID)
         word_lang_variant \
-                = _Language(word.Languages(word_lang_id).NameLocal).variant
+            = _Language(word.Languages(word_lang_id).NameLocal).variant
         # Dictionary languages known to Word
         dic_names = defaultdict(list)
         for dic_lang in word.Languages:
@@ -766,9 +764,9 @@ class _MainWindow:
                 lang_variants = sorted(dic_names[lang_detected.base])
                 try:
                     lang_default \
-                            = word.Languages('%s (%s)'
-                                             % (lang_detected.base,
-                                             word_lang_variant)).NameLocal
+                        = word.Languages('%s (%s)'
+                                         % (lang_detected.base,
+                                            word_lang_variant)).NameLocal
                 except pywintypes.com_error:
                     lang_default = doc_lang
                 menu_langs.append((doc_lang, lang_variants, lang_default))
@@ -816,7 +814,7 @@ class _MainWindow:
                 detected = q_detected.get(block=False)
             except queue.Empty:
                 self.root.after(100, self.wait_for_languages,
-                                 q_detected, q_selected)
+                                q_detected, q_selected)
             else:
                 lang_window = _LanguageWindow(detected, q_selected)
                 self.root.eval('tk::PlaceWindow %s widget .'
@@ -834,11 +832,9 @@ class _MainWindow:
         Arguments:
             future -- execution of grammar check
         """
-        # pylint: disable=broad-except
-        # Reason: exception logged
         try:
             future.result()
-        except (_InterProcessError, _WordNotFoundError, 
+        except (_InterProcessError, _WordNotFoundError,
                 _ModalDialogError) as err:
             tk.messagebox.showerror(title=errers.SHORTNAME + ' Error',
                                     message=err, parent=self.root)
@@ -1150,8 +1146,8 @@ class _LanguageWindow(tk.Toplevel):
                 lang_variants.insert(0, lang_default)
                 separator = 2
             self._languages[lang_doc] \
-                    = _OptionList(languages, lang_doc, lang_variants,
-                                  initial=lang_default, separators=[separator])
+                = _OptionList(languages, lang_doc, lang_variants,
+                              initial=lang_default, separators=[separator])
         # Buttons
         _Spacer(languages)
         buttons = [('ok', 'Ok', 0, self.on_ok, 'normal'),
@@ -1267,16 +1263,16 @@ class _ShortcutWindow:
         if 'win32com.client' in sys.modules:
             updaters['Desktop'] = ft.partial(cls.update_windows_other,
                                              folder_name='Desktop')
-        updaters['Open With menu'] =  cls.update_windows_open_with
+        updaters['Open With menu'] = cls.update_windows_open_with
         if 'win32com.client' in sys.modules:
-            updaters['Start menu' ] = ft.partial(cls.update_windows_other,
-                                                 folder_name='StartMenu')
+            updaters['Start menu'] = ft.partial(cls.update_windows_other,
+                                                folder_name='StartMenu')
         message = textwrap.dedent(f"""\
             For instance, right-clicking on a LaTeX file and choosing
             {errers.SHORTNAME} under the "Open With" submenu launches the
             application GUI with the input file path already filled out. """)
         if 'win32com.client' in sys.modules:
-            message += textwrap.dedent(f"""\
+            message += textwrap.dedent("""\
                 Dragging a LaTeX file and dropping it on a desktop shortcut
                 does the same thing.""")
         return cls(root, updaters, message)
@@ -1364,7 +1360,7 @@ class _ShortcutWindow:
         # Reason: exception logged
         try:
             updaters = [updater
-                        for checkbox, updater in zip(self._checkboxes, 
+                        for checkbox, updater in zip(self._checkboxes,
                                                      self._updaters.values())
                         if checkbox.get()]
             _BackgroundTask(self.root, 'update_shortcuts',
@@ -1381,8 +1377,6 @@ class _ShortcutWindow:
             updaters -- updater functions to run
             delete -- delete rather than create or update shortcut
         """
-        # pylint: disable=broad-except
-        # Reason: exception logged
         for updater in updaters:
             if not updater(self, delete=delete):
                 break
@@ -1393,8 +1387,6 @@ class _ShortcutWindow:
         Argument:
             future -- execution of shortcut update
         """
-        # pylint: disable=broad-except
-        # Reason: exception logged
         try:
             future.result(timeout=0)
         finally:
@@ -1545,7 +1537,7 @@ class _ShortcutWindow:
             shutil.rmtree(str(tmp), ignore_errors=True)
             shutil.rmtree(str(final), ignore_errors=True)
             if not delete:
-                icon_old = tmp.joinpath('Contents', 'Resources', 
+                icon_old = tmp.joinpath('Contents', 'Resources',
                                         'droplet.icns')
                 icon_new = Path(__file__).parent.joinpath('icon',
                                                           'errers.icns')
@@ -2107,7 +2099,6 @@ class _LogBox:
 
         Required for stdout/stderr interface.
         """
-        pass
 
     def get(self):
         """Return value of text box."""
@@ -2406,18 +2397,16 @@ class _BackgroundTask:
             args -- positional arguments of task
             kwargs -- keyword arguments of task
             callback -- callable to be called on completion of task, with
-                Future object (from concurrent.futures) as single argument; must
-                call future.result to trigger exception handling; Future.result
-                is called directly if callback is None
+                Future object (from concurrent.futures) as single argument;
+                must call future.result to trigger exception handling;
+                Future.result is called directly if callback is None
             widgets -- list of widgets for which to show busy cursor (root if
                 None)
         """
-        # pylint: disable=broad-except
-        # Reason: exception re-raised
         self._root = root
         self._busy = _Busy(root, widgets)
         self._busy.__enter__()
-        # Manually trigger garbage collection to avoid Tkinter objects being 
+        # Manually trigger garbage collection to avoid Tkinter objects being
         # garbage collected in another thread.
         gc.collect()
         self._executor = futures.ThreadPoolExecutor(1, thread_name)
@@ -2569,8 +2558,8 @@ def run(init_inpath=None, *, init_outpattern=_app.OUTPATTERN,
         # Warn of tkinter bug for macOS >= 14. Rely on Darwin version, because
         # platform.mac_ver() does not return more than 10.16 on python < 3.8.
         if (platform.system() == 'Darwin'
-            and int(platform.release().split('.')[0]) >= 23
-            and sys.version_info < (3, 11, 7)):
+                and int(platform.release().split('.')[0]) >= 23
+                and sys.version_info < (3, 11, 7)):
             _misc_logger.warning(_MACOS14)
         root.protocol('WM_DELETE_WINDOW', main_window.on_delete)
         root.deiconify()
