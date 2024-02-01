@@ -1160,7 +1160,7 @@ class _LanguageWindow(tk.Toplevel):
         # Keyboard shortcuts
         self.bind(f'<{MOD_KEY}-o>', lambda e: self.on_ok())
         self.bind(f'<{MOD_KEY}-c>', lambda e: self.on_cancel())
-        self.bind('<Return>', lambda e: self.on_apply())
+        self.bind('<Return>', lambda e: self.on_ok())
         self.bind('<Escape>', lambda e: self.on_cancel())
 
     def on_cancel(self):
