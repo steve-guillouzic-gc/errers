@@ -406,6 +406,9 @@ class _MainWindow:
         try:
             help_window = _HelpWindow()
             help_window.transient(self.root)
+            if platform.system() in ('Darwin', 'Windows'):
+                self.root.eval('tk::PlaceWindow %s widget .'
+                               % help_window.winfo_toplevel())
             help_window.update_idletasks()
             help_window.focus_set()
             help_window.grab_set()
@@ -457,6 +460,9 @@ class _MainWindow:
             if self._inpath.locked():
                 return
             self._options.transient(self.root)
+            if platform.system() in ('Darwin', 'Windows'):
+                self.root.eval('tk::PlaceWindow %s widget .'
+                               % self._options.winfo_toplevel())
             self._options.deiconify()
             self._options.update_idletasks()
             self._options.focus_set()
@@ -813,6 +819,8 @@ class _MainWindow:
                                  q_detected, q_selected)
             else:
                 lang_window = _LanguageWindow(detected, q_selected)
+                self.root.eval('tk::PlaceWindow %s widget .'
+                               % lang_window.winfo_toplevel())
                 lang_window.transient(self.root)
                 lang_window.update_idletasks()
                 lang_window.focus_set()

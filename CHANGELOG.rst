@@ -25,6 +25,8 @@ Changed
   the latter does not require the pywin32 package.
 - On Windows, when clicking the "Check" button, open the modern Editor tool if
   available, defaulting back to the old grammar and spell checker if not.
+- On Windows and macOS, open help, options and language windows approximately
+  centered on main window. (This was already the case on Linux.)
 
 Fixed
 -----
