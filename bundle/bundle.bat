@@ -6,7 +6,7 @@ REM SPDX-License-Identifier: LicenseRef-MIT-DND
 REM
 REM This file is part of the ERRERS package.
 
-set PY_PYTHON=3.11
+set PY_PYTHON=3.12
 
 REM Determine which python command to use
 if "%1" NEQ "" (set PYTHON=%1 & goto run)
