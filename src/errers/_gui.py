@@ -55,6 +55,7 @@ Classes (internal):
 
 Functions (internal):
     _dispatch -- return COM object with early-binding, clearing cache if needed
+    _centre_window -- centre one window over another
 """
 
 __all__ = ['run']
@@ -406,9 +407,7 @@ class _MainWindow:
         try:
             help_window = _HelpWindow()
             help_window.transient(self.root)
-            if platform.system() in ('Darwin', 'Windows'):
-                self.root.eval('tk::PlaceWindow %s widget .'
-                               % help_window.winfo_toplevel())
+            _centre_window(self.root, self.root, help_window)
             help_window.update_idletasks()
             help_window.focus_set()
             help_window.grab_set()
@@ -460,9 +459,7 @@ class _MainWindow:
             if self._inpath.locked():
                 return
             self._options.transient(self.root)
-            if platform.system() in ('Darwin', 'Windows'):
-                self.root.eval('tk::PlaceWindow %s widget .'
-                               % self._options.winfo_toplevel())
+            _centre_window(self.root, self.root, self._options)
             self._options.deiconify()
             self._options.update_idletasks()
             self._options.focus_set()
@@ -817,8 +814,7 @@ class _MainWindow:
                                 q_detected, q_selected)
             else:
                 lang_window = _LanguageWindow(detected, q_selected)
-                self.root.eval('tk::PlaceWindow %s widget .'
-                               % lang_window.winfo_toplevel())
+                _centre_window(self.root, self.root, lang_window)
                 lang_window.transient(self.root)
                 lang_window.update_idletasks()
                 lang_window.focus_set()
@@ -2626,3 +2622,22 @@ def _dispatch(prog_id):
         shutil.rmtree(gencache.GetGeneratePath(), ignore_errors=True)
         raise
     return com_object
+
+
+def _centre_window(root, parent, child):
+    """Centre one window over another.
+
+    Arguments:
+        root -- root Tk window
+        parent -- window over which to centre
+        child -- window to be centred
+    """
+    system = platform.system()
+    # Child windows are already centred on Linux
+    if system in ('Darwin', 'Windows'):
+        root.eval('tk::PlaceWindow %s widget %s'
+                  % (child.winfo_toplevel(), parent.winfo_toplevel()))
+        # PlaceWindow does not consider titlebar height, so tweak is needed
+        y_shift = {'Darwin': 28, 'Windows': 32}[system]
+        child.geometry('+%d+%d' % (child.winfo_x(),
+                                   child.winfo_y() - y_shift))
