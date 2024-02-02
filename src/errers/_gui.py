@@ -526,7 +526,7 @@ class _MainWindow:
                     all_files = last
                 directory = outroot.parent
                 message = 'Overwrite %s in %s?' % (all_files, directory)
-                extract = tk.messagebox.askyesno(title=errers.LONGNAME,
+                extract = tk.messagebox.askyesno(title=errers.SHORTNAME,
                                                  message=message,
                                                  default='yes')
                 self.root.focus_set()
