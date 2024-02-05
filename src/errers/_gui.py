@@ -2612,8 +2612,8 @@ def _show_error(root, parent, message):
     _set_icon(dialog)
     # Keyboard shortcuts
     dialog.bind(f'<{MOD_KEY}-o>', lambda e: dialog.destroy())
-    dialog.bind(f'<Return>', lambda e: dialog.destroy())
-    dialog.bind(f'<Escape>', lambda e: dialog.destroy())
+    dialog.bind('<Return>', lambda e: dialog.destroy())
+    dialog.bind('<Escape>', lambda e: dialog.destroy())
     # Show window and wait for acknowledgement
     if parent is None:
         root.eval('tk::PlaceWindow %s center' % dialog.winfo_toplevel())
@@ -2638,10 +2638,12 @@ def _ask_yes_no(root, parent, question):
     """
     # Function to save answer
     answer = None
+
     def set_answer(value):
         nonlocal answer
         answer = value
         dialog.destroy()
+
     # Build dialog box
     dialog = tk.Toplevel(parent)
     dialog.withdraw()
@@ -2655,18 +2657,18 @@ def _ask_yes_no(root, parent, question):
     buttons = ttk.Frame(frame)
     icon.grid(row=0, column=0, padx=(20, 5), pady=10, sticky='n')
     text.grid(row=0, column=1, padx=(0, 30), pady=10)
-    buttons.grid(row=1, column=0, columnspan=2, padx=10, pady=(0,10))
+    buttons.grid(row=1, column=0, columnspan=2, padx=10, pady=(0, 10))
     yes = ttk.Button(buttons, text='Yes', underline=0,
                      command=lambda: set_answer(True))
     no = ttk.Button(buttons, text='No', underline=0,
-                     command=lambda: set_answer(False))
+                    command=lambda: set_answer(False))
     yes.grid(row=0, column=0, padx=5)
     no.grid(row=0, column=1, padx=5)
     # Keyboard shortcuts
     dialog.bind(f'<{MOD_KEY}-y>', lambda e: set_answer(True))
     dialog.bind(f'<{MOD_KEY}-n>', lambda e: set_answer(False))
-    dialog.bind(f'<Return>', lambda e: set_answer(True))
-    dialog.bind(f'<Escape>', lambda e: set_answer(False))
+    dialog.bind('<Return>', lambda e: set_answer(True))
+    dialog.bind('<Escape>', lambda e: set_answer(False))
     # Show window and wait for answer
     if parent is None:
         root.eval('tk::PlaceWindow %s center' % dialog.winfo_toplevel())
