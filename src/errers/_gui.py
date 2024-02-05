@@ -146,11 +146,13 @@ _DESCRIPTION = [
         sub-directory of its installation folder."""),
     textwrap.dedent(f"""\
         Keyboard shortcuts are available for buttons, checkboxes, and text
-        fields. For most widgets, the shortcut is the {MOD_KEY} key combined
-        with the underlined letter in the widget label. The only exception is
+        fields. For most controls, the shortcut is the {MOD_KEY} key combined
+        with the underlined letter in the control label. The only exception is
         the Times option, for which the shortcut is {MOD_KEY}+X. In dialog
         boxes, the enter and return keys can also be used for "Yes" and "Ok",
-        while the escape key can be used for "No" and "Cancel"."""),
+        while the escape key can be used for "No" and "Cancel". Also, the tab
+        key cycles through controls, and the space bar toggles checkboxes and
+        activates buttons."""),
     "More information in user manual:"
 ]
 _MANUAL = 'https://cradpdf.drdc-rddc.gc.ca/PDFS/unc451/p813656_A1b.pdf'
