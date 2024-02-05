@@ -56,6 +56,8 @@ Classes (internal):
 Functions (internal):
     _dispatch -- return COM object with early-binding, clearing cache if needed
     _centre_window -- centre one window over another
+    _show_error -- custom error dialog box
+    _ask_yes_no -- custom yes-no dialog box
 """
 
 __all__ = ['run']
@@ -118,9 +120,8 @@ else:
     MOD_KEY = 'Alt'
     _NOTE_URL = 'Note: left-click to open links; right-click to copy.'
 _UNEXPECTED = 'Unexpected error: please report to developer.'
-_UNEXPECTED_MESSAGE = 'Unexpected error'
-_UNEXPECTED_DETAIL = ('Details written to console window. '
-                      'Please report to developer.')
+_UNEXPECTED_CONSOLE = ('Unexpected error: details written to console window. '
+                       'Please report to developer.')
 _WORD_NOT_FOUND = 'Microsoft Word not found'
 _MODAL_DIALOG = ('A dialog box opened in Microsoft Word makes it '
                  'unresponsive. Please close the dialog box and try again.')
@@ -328,9 +329,8 @@ class _MainWindow:
             self._inpath.set(_CLICK_INPUT_FILE)
             self._status.set(_FILENAME_REQUIRED)
         elif not _app.valid_input_file(init_inpath):
-            tk.messagebox.showerror(title=errers.SHORTNAME + ' Error',
-                                    message=_INVALID_INPUT_FILE,
-                                    parent=self.root)
+            _show_error(root=self.root, parent=None,
+                        message=_INVALID_INPUT_FILE)
             self._inpath.set(_CLICK_INPUT_FILE)
             self._status.set(_FILENAME_REQUIRED)
         else:
@@ -486,9 +486,8 @@ class _MainWindow:
         try:
             # Check if input file path is valid.
             if not Path(self._inpath.get()).is_file():
-                tk.messagebox.showerror(title=errers.SHORTNAME + ' Error',
-                                        message=_INVALID_INPUT_FILE,
-                                        parent=self.root)
+                _show_error(root=self.root, parent=self.root,
+                            message=_INVALID_INPUT_FILE)
                 self._inpath.set(_CLICK_INPUT_FILE)
                 self._status.set(_FILENAME_REQUIRED)
                 return
@@ -497,9 +496,7 @@ class _MainWindow:
                 outroot = _app.output_file_root(Path(self._inpath.get()),
                                                 self._outpattern.get())
             except _app.InvalidFilenamePattern as err:
-                tk.messagebox.showerror(title=errers.SHORTNAME + ' Error',
-                                        message=err,
-                                        parent=self.root)
+                _show_error(root=self.root, parent=self.root, message=str(err))
                 self._status.set(_INVALID_OUTPUT_FILE)
                 return
             # If applicable, ask if output and log files should be overwritten.
@@ -526,9 +523,8 @@ class _MainWindow:
                     all_files = last
                 directory = outroot.parent
                 message = 'Overwrite %s in %s?' % (all_files, directory)
-                extract = tk.messagebox.askyesno(title=errers.SHORTNAME,
-                                                 message=message,
-                                                 default='yes')
+                extract = _ask_yes_no(root=self.root, parent=self.root,
+                                      question=message)
                 self.root.focus_set()
             else:
                 extract = True
@@ -832,8 +828,7 @@ class _MainWindow:
             future.result()
         except (_InterProcessError, _WordNotFoundError,
                 _ModalDialogError) as err:
-            tk.messagebox.showerror(title=errers.SHORTNAME + ' Error',
-                                    message=err, parent=self.root)
+            _show_error(root=self.root, parent=self.root, message=str(err))
 
     def on_delete(self):
         """Clean-up on window closure."""
@@ -1374,8 +1369,7 @@ class _ShortcutWindow:
             delete -- delete rather than create or update shortcut
         """
         for updater in updaters:
-            if not updater(self, delete=delete):
-                break
+            updater(self, delete=delete)
 
     def finalize_update(self, future):
         """Finalize update by closing window and handling exceptions.
@@ -1385,6 +1379,10 @@ class _ShortcutWindow:
         """
         try:
             future.result(timeout=0)
+        except Exception:
+            _misc_logger.exception(_UNEXPECTED)
+            _show_error(root=self.root, parent=self.root,
+                        message=_UNEXPECTED_CONSOLE)
         finally:
             self.root.after(0, self.root.destroy)
 
@@ -1393,71 +1391,57 @@ class _ShortcutWindow:
 
         Arguments:
             delete -- delete shortcut rather than create or update it
-
-        Returns:
-            Boolean indicating if shortcut update was successful
         """
-        # pylint: disable=broad-except
-        # Reason: exception logged
-        try:
-            if delete:
-                keys = [
-                    r'Software\Classes\tex_errers\shell\open\command',
-                    r'Software\Classes\tex_errers\shell\open',
-                    r'Software\Classes\tex_errers\shell',
-                    r'Software\Classes\tex_errers']
-                values = [
-                    (r'Software\Microsoft\Windows\CurrentVersion\Explorer'
-                     r'\FileExts\.tex\OpenWithProgids',
-                     'tex_errers')]
-                for sub_key in keys:
+        if delete:
+            keys = [
+                r'Software\Classes\tex_errers\shell\open\command',
+                r'Software\Classes\tex_errers\shell\open',
+                r'Software\Classes\tex_errers\shell',
+                r'Software\Classes\tex_errers']
+            values = [
+                (r'Software\Microsoft\Windows\CurrentVersion\Explorer'
+                 r'\FileExts\.tex\OpenWithProgids',
+                 'tex_errers')]
+            for sub_key in keys:
+                try:
+                    winreg.DeleteKey(winreg.HKEY_CURRENT_USER, sub_key)
+                except FileNotFoundError:
+                    pass
+            for sub_key, sub_sub_key in values:
+                with winreg.CreateKey(winreg.HKEY_CURRENT_USER,
+                                      sub_key) as key:
                     try:
-                        winreg.DeleteKey(winreg.HKEY_CURRENT_USER, sub_key)
+                        winreg.DeleteValue(key, sub_sub_key)
                     except FileNotFoundError:
                         pass
-                for sub_key, sub_sub_key in values:
-                    with winreg.CreateKey(winreg.HKEY_CURRENT_USER,
-                                          sub_key) as key:
-                        try:
-                            winreg.DeleteValue(key, sub_sub_key)
-                        except FileNotFoundError:
-                            pass
+        else:
+            if getattr(sys, 'frozen', False):
+                # App is frozen
+                command = '"%s"' % sys.executable
             else:
-                if getattr(sys, 'frozen', False):
-                    # App is frozen
-                    command = '"%s"' % sys.executable
-                else:
-                    # App is not frozen
-                    pyw = Path(sys.executable).parent.joinpath('pythonw.exe')
-                    command = ('"%s" -c "import errers; errers._cli.run()"'
-                               % pyw)
-                keys = [
-                    (r'Software\Classes\tex_errers\shell\open',
-                     'FriendlyAppName',
-                     winreg.REG_SZ,
-                     'ERRERS'),
-                    (r'Software\Classes\tex_errers\shell\open\command',
-                     '',
-                     winreg.REG_SZ,
-                     '%s --gui "%%1"' % command),
-                    (r'Software\Microsoft\Windows\CurrentVersion\Explorer'
-                     r'\FileExts\.tex\OpenWithProgids',
-                     'tex_errers',
-                     winreg.REG_NONE,
-                     b'')]
-                for sub_key, sub_sub_key, value_type, value in keys:
-                    with winreg.CreateKey(winreg.HKEY_CURRENT_USER,
-                                          sub_key) as key:
-                        winreg.SetValueEx(key, sub_sub_key, 0,
-                                          value_type, value)
-            return True
-        except Exception:
-            _misc_logger.exception(_UNEXPECTED)
-            tk.messagebox.showerror(title=errers.SHORTNAME + ' Error',
-                                    message=_UNEXPECTED_MESSAGE,
-                                    detail=_UNEXPECTED_DETAIL,
-                                    parent=self.root)
-            return False
+                # App is not frozen
+                pyw = Path(sys.executable).parent.joinpath('pythonw.exe')
+                command = ('"%s" -c "import errers; errers._cli.run()"'
+                           % pyw)
+            keys = [
+                (r'Software\Classes\tex_errers\shell\open',
+                 'FriendlyAppName',
+                 winreg.REG_SZ,
+                 'ERRERS'),
+                (r'Software\Classes\tex_errers\shell\open\command',
+                 '',
+                 winreg.REG_SZ,
+                 '%s --gui "%%1"' % command),
+                (r'Software\Microsoft\Windows\CurrentVersion\Explorer'
+                 r'\FileExts\.tex\OpenWithProgids',
+                 'tex_errers',
+                 winreg.REG_NONE,
+                 b'')]
+            for sub_key, sub_sub_key, value_type, value in keys:
+                with winreg.CreateKey(winreg.HKEY_CURRENT_USER,
+                                      sub_key) as key:
+                    winreg.SetValueEx(key, sub_sub_key, 0,
+                                      value_type, value)
 
     def update_windows_other(self, folder_name, delete):
         """Create or delete shortcut on Windows platform.
@@ -1466,51 +1450,34 @@ class _ShortcutWindow:
             folder_name -- special folder where to create shortcut (should be
                 "Desktop", "SendTo" or "StartMenu")
             delete -- delete shortcut rather than create or update it
-
-        Returns:
-            Boolean indicating if shortcut update was successful
         """
-        # pylint: disable=broad-except
-        # Reason: exception logged
+        # Initialize COM libraries for this thread.
+        pythoncom.CoInitialize()
         try:
-            # Initialize COM libraries for this thread.
-            pythoncom.CoInitialize()
-            try:
-                shell = _dispatch('Wscript.Shell')
-            except AttributeError:
-                tk.messagebox.showerror(title=errers.SHORTNAME + ' Error',
-                                        message=_CORRUPT_GEN_PY,
-                                        parent=self.root)
-                return False
-            folder = Path(shell.SpecialFolders(folder_name))
-            shortcut_path = folder.joinpath(errers.SHORTNAME + '.lnk')
-            if delete:
-                shortcut_path.unlink(missing_ok=True)
+            shell = _dispatch('Wscript.Shell')
+        except AttributeError as err:
+            raise _InterProcessError from err
+        folder = Path(shell.SpecialFolders(folder_name))
+        shortcut_path = folder.joinpath(errers.SHORTNAME + '.lnk')
+        if delete:
+            shortcut_path.unlink(missing_ok=True)
+        else:
+            shortcut = shell.CreateShortcut(shortcut_path)
+            if getattr(sys, 'frozen', False):
+                # App is frozen
+                shortcut.TargetPath = '"%s"' % sys.executable
+                shortcut.Arguments = '--gui'
             else:
-                shortcut = shell.CreateShortcut(shortcut_path)
-                if getattr(sys, 'frozen', False):
-                    # App is frozen
-                    shortcut.TargetPath = '"%s"' % sys.executable
-                    shortcut.Arguments = '--gui'
-                else:
-                    # App is not frozen
-                    executable \
-                        = Path(sys.executable).parent.joinpath('pythonw.exe')
-                    shortcut.TargetPath = '"%s"' % executable
-                    shortcut.Arguments \
-                        = '-c "import errers; errers._cli.run()" --gui'
-                shortcut.WorkingDirectory = r'%USERPROFILE%\Documents'
-                shortcut.IconLocation \
-                    = str(Path(__file__).parent.joinpath('icon', 'errers.ico'))
-                shortcut.Save()
-            return True
-        except Exception:
-            _misc_logger.exception(_UNEXPECTED)
-            tk.messagebox.showerror(title=errers.SHORTNAME + ' Error',
-                                    message=_UNEXPECTED_MESSAGE,
-                                    detail=_UNEXPECTED_DETAIL,
-                                    parent=self.root)
-            return False
+                # App is not frozen
+                executable \
+                    = Path(sys.executable).parent.joinpath('pythonw.exe')
+                shortcut.TargetPath = '"%s"' % executable
+                shortcut.Arguments \
+                    = '-c "import errers; errers._cli.run()" --gui'
+            shortcut.WorkingDirectory = r'%USERPROFILE%\Documents'
+            shortcut.IconLocation \
+                = str(Path(__file__).parent.joinpath('icon', 'errers.ico'))
+            shortcut.Save()
 
     def update_macos(self, folder, delete):
         """Create or delete shortcut on macOS platform.
@@ -1521,56 +1488,42 @@ class _ShortcutWindow:
         Arguments:
             folder -- folder where to create shortcut
             delete -- delete shortcut rather than create or update it
-
-        Returns:
-            Boolean indicating if shortcut update was successful
         """
-        # pylint: disable=broad-except
-        # Reason: exception logged
-        try:
-            tmp = folder.joinpath(f'{errers.SHORTNAME}_tmp.app')
-            final = folder.joinpath(f'{errers.SHORTNAME}.app')
-            shutil.rmtree(str(tmp), ignore_errors=True)
-            shutil.rmtree(str(final), ignore_errors=True)
-            if not delete:
-                icon_old = tmp.joinpath('Contents', 'Resources',
-                                        'droplet.icns')
-                icon_new = Path(__file__).parent.joinpath('icon',
-                                                          'errers.icns')
-                info_plist = tmp.joinpath('Contents', 'Info.plist')
-                executable = Path(sys.executable).parent.joinpath('errers')
-                script = textwrap.dedent(f"""\
-                    on run
-                        do shell script "{executable}"
-                    end run
+        tmp = folder.joinpath(f'{errers.SHORTNAME}_tmp.app')
+        final = folder.joinpath(f'{errers.SHORTNAME}.app')
+        shutil.rmtree(str(tmp), ignore_errors=True)
+        shutil.rmtree(str(final), ignore_errors=True)
+        if not delete:
+            icon_old = tmp.joinpath('Contents', 'Resources',
+                                    'droplet.icns')
+            icon_new = Path(__file__).parent.joinpath('icon',
+                                                      'errers.icns')
+            info_plist = tmp.joinpath('Contents', 'Info.plist')
+            executable = Path(sys.executable).parent.joinpath('errers')
+            script = textwrap.dedent(f"""\
+                on run
+                    do shell script "{executable}"
+                end run
 
-                    on open LaTeX_file
-                        set LaTeX_path to POSIX path of LaTeX_file
-                        do shell script "{executable} --gui " & LaTeX_path
-                    end open""")
-                folder.mkdir(parents=True, exist_ok=True)
-                sp.run(['osacompile', '-o', str(tmp)], input=script,
-                       universal_newlines=True, stderr=sp.PIPE, check=True)
-                Path(icon_old).unlink()
-                shutil.copy(str(icon_new), str(icon_old.parent))
-                with open(info_plist, 'rb') as info_file:
-                    info = plistlib.load(info_file)
-                    doc_types = info['CFBundleDocumentTypes']
-                    doc_extensions = doc_types[0]['CFBundleTypeExtensions']
-                    doc_extensions[0] = 'tex'
-                    info['CFBundleIconFile'] = 'errers'
-                with open(info_plist, 'wb') as info_file:
-                    plistlib.dump(info, info_file)
-                shutil.copytree(str(tmp), str(final))
-                shutil.rmtree(str(tmp))
-            return True
-        except Exception:
-            _misc_logger.exception(_UNEXPECTED)
-            tk.messagebox.showerror(title=errers.SHORTNAME + ' Error',
-                                    message=_UNEXPECTED_MESSAGE,
-                                    detail=_UNEXPECTED_DETAIL,
-                                    parent=self.root)
-            return False
+                on open LaTeX_file
+                    set LaTeX_path to POSIX path of LaTeX_file
+                    do shell script "{executable} --gui " & LaTeX_path
+                end open""")
+            folder.mkdir(parents=True, exist_ok=True)
+            sp.run(['osacompile', '-o', str(tmp)], input=script,
+                   universal_newlines=True, stderr=sp.PIPE, check=True)
+            Path(icon_old).unlink()
+            shutil.copy(str(icon_new), str(icon_old.parent))
+            with open(info_plist, 'rb') as info_file:
+                info = plistlib.load(info_file)
+                doc_types = info['CFBundleDocumentTypes']
+                doc_extensions = doc_types[0]['CFBundleTypeExtensions']
+                doc_extensions[0] = 'tex'
+                info['CFBundleIconFile'] = 'errers'
+            with open(info_plist, 'wb') as info_file:
+                plistlib.dump(info, info_file)
+            shutil.copytree(str(tmp), str(final))
+            shutil.rmtree(str(tmp))
 
     def update_linux(self, file_path, chmod, delete):
         """Create or delete shortcut on Linux platform.
@@ -1579,39 +1532,25 @@ class _ShortcutWindow:
             file_path -- path of shortcut file
             chmod -- whether to make the file executable
             delete -- delete shortcut rather than create or update it
-
-        Returns:
-            Boolean indicating if shortcut update was successful
         """
-        # pylint: disable=broad-except
-        # Reason: exception logged
-        try:
-            if delete:
-                file_path.unlink(missing_ok=True)
-            else:
-                icon = Path(__file__).parent.joinpath('icon', 'errers.png')
-                executable = Path(sys.executable).parent.joinpath('errers')
-                content = textwrap.dedent(f"""\
-                    [Desktop Entry]
-                    Type=Application
-                    Name={errers.SHORTNAME}
-                    Comment={errers.LONGNAME}
-                    Icon={icon}
-                    Exec={executable} --gui %f
-                    MimeType=text/x-tex
-                    Categories=Utility""")
-                file_path.write_text(content)
-                if chmod:
-                    os.chmod(file_path,
-                             os.stat(file_path).st_mode | stat.S_IXUSR)
-            return True
-        except Exception:
-            _misc_logger.exception(_UNEXPECTED)
-            tk.messagebox.showerror(title=errers.SHORTNAME + ' Error',
-                                    message=_UNEXPECTED_MESSAGE,
-                                    detail=_UNEXPECTED_DETAIL,
-                                    parent=self.root)
-            return False
+        if delete:
+            file_path.unlink(missing_ok=True)
+        else:
+            icon = Path(__file__).parent.joinpath('icon', 'errers.png')
+            executable = Path(sys.executable).parent.joinpath('errers')
+            content = textwrap.dedent(f"""\
+                [Desktop Entry]
+                Type=Application
+                Name={errers.SHORTNAME}
+                Comment={errers.LONGNAME}
+                Icon={icon}
+                Exec={executable} --gui %f
+                MimeType=text/x-tex
+                Categories=Utility""")
+            file_path.write_text(content)
+            if chmod:
+                os.chmod(file_path,
+                         os.stat(file_path).st_mode | stat.S_IXUSR)
 
 
 class _SectionLabel:
@@ -2641,3 +2580,96 @@ def _centre_window(root, parent, child):
         y_shift = {'Darwin': 28, 'Windows': 32}[system]
         child.geometry('+%d+%d' % (child.winfo_x(),
                                    child.winfo_y() - y_shift))
+
+
+def _show_error(root, parent, message):
+    """Custom error dialog box.
+
+    Arguments:
+        root -- root widget
+        parent -- parent window
+        message -- message to display
+    """
+    # Build dialog box
+    dialog = tk.Toplevel(parent)
+    dialog.withdraw()
+    dialog.resizable(False, False)
+    dialog.title('ERRERS')
+    frame = ttk.Frame(dialog)
+    frame.grid(row=0, column=0)
+    icon = ttk.Label(frame, image='::tk::icons::error')
+    text = ttk.Label(frame, text=textwrap.fill(message, width=60))
+    ok = ttk.Button(frame, text='Ok', underline=0,
+                    command=dialog.destroy)
+    icon.grid(row=0, column=0, padx=(20, 5), pady=10, sticky='n')
+    text.grid(row=0, column=1, padx=(0, 30), pady=10)
+    ok.grid(row=1, column=0, columnspan=2, pady=(0, 10))
+    _set_icon(dialog)
+    # Keyboard shortcuts
+    dialog.bind(f'<{MOD_KEY}-o>', lambda e: dialog.destroy())
+    dialog.bind(f'<Return>', lambda e: dialog.destroy())
+    dialog.bind(f'<Escape>', lambda e: dialog.destroy())
+    # Show window and wait for acknowledgement
+    if parent is None:
+        root.eval('tk::PlaceWindow %s center' % dialog.winfo_toplevel())
+    else:
+        dialog.transient(parent)
+        _centre_window(root, parent, dialog)
+    dialog.deiconify()
+    dialog.update_idletasks()
+    dialog.focus_set()
+    dialog.grab_set()
+    dialog.wait_window(dialog)
+
+
+def _ask_yes_no(root, parent, question):
+    """Custom yes-no dialog box.
+
+    Arguments:
+        root -- root widget
+        parent -- parent window
+        question -- yes-no question
+    """
+    # Function to save answer
+    answer = None
+    def set_answer(value):
+        nonlocal answer
+        answer = value
+        dialog.destroy()
+    # Build dialog box
+    dialog = tk.Toplevel(parent)
+    dialog.withdraw()
+    dialog.resizable(False, False)
+    dialog.title('ERRERS')
+    dialog.protocol('WM_DELETE_WINDOW', lambda: set_answer(False))
+    frame = ttk.Frame(dialog)
+    frame.grid(row=0, column=0)
+    icon = ttk.Label(frame, image='::tk::icons::question')
+    text = ttk.Label(frame, text=textwrap.fill(question, width=60))
+    buttons = ttk.Frame(frame)
+    icon.grid(row=0, column=0, padx=(20, 5), pady=10, sticky='n')
+    text.grid(row=0, column=1, padx=(0, 30), pady=10)
+    buttons.grid(row=1, column=0, columnspan=2, padx=10, pady=(0,10))
+    yes = ttk.Button(buttons, text='Yes', underline=0,
+                     command=lambda: set_answer(True))
+    no = ttk.Button(buttons, text='No', underline=0,
+                     command=lambda: set_answer(False))
+    yes.grid(row=0, column=0, padx=5)
+    no.grid(row=0, column=1, padx=5)
+    # Keyboard shortcuts
+    dialog.bind(f'<{MOD_KEY}-y>', lambda e: set_answer(True))
+    dialog.bind(f'<{MOD_KEY}-n>', lambda e: set_answer(False))
+    dialog.bind(f'<Return>', lambda e: set_answer(True))
+    dialog.bind(f'<Escape>', lambda e: set_answer(False))
+    # Show window and wait for answer
+    if parent is None:
+        root.eval('tk::PlaceWindow %s center' % dialog.winfo_toplevel())
+    else:
+        dialog.transient(parent)
+        _centre_window(root, parent, dialog)
+    dialog.deiconify()
+    dialog.update_idletasks()
+    dialog.focus_set()
+    dialog.grab_set()
+    parent.wait_window(dialog)
+    return answer
