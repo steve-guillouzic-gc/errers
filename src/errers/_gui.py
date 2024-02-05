@@ -408,6 +408,7 @@ class _MainWindow:
             help_window = _HelpWindow()
             help_window.transient(self.root)
             _centre_window(self.root, self.root, help_window)
+            _set_icon(help_window)
             help_window.update_idletasks()
             help_window.focus_set()
             help_window.grab_set()
@@ -460,6 +461,7 @@ class _MainWindow:
                 return
             self._options.transient(self.root)
             _centre_window(self.root, self.root, self._options)
+            _set_icon(self._options)
             self._options.deiconify()
             self._options.update_idletasks()
             self._options.focus_set()
@@ -812,6 +814,7 @@ class _MainWindow:
                 lang_window = _LanguageWindow(detected, q_selected)
                 _centre_window(self.root, self.root, lang_window)
                 lang_window.transient(self.root)
+                _set_icon(lang_window)
                 lang_window.update_idletasks()
                 lang_window.focus_set()
                 lang_window.grab_set()
@@ -2615,6 +2618,7 @@ def _show_error(root, parent, message):
     else:
         dialog.transient(parent)
         _centre_window(root, parent, dialog)
+    _set_icon(dialog)
     dialog.deiconify()
     dialog.update_idletasks()
     dialog.focus_set()
@@ -2667,6 +2671,7 @@ def _ask_yes_no(root, parent, question):
     else:
         dialog.transient(parent)
         _centre_window(root, parent, dialog)
+    _set_icon(dialog)
     dialog.deiconify()
     dialog.update_idletasks()
     dialog.focus_set()
