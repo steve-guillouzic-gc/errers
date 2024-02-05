@@ -21,7 +21,7 @@ Requirements
 ============
 
 ERRERS runs on Python 3, more specifically version 3.6 or more recent. Version
-3.1.1 was tested on Microsoft Windows 10, Apple macOS 14, and Debian
+3.1.1 was tested on Microsoft Windows 10 and 11, Apple macOS 14, and Debian
 GNU/Linux 12. It uses the third-party regex module if available
 (https://pypi.org/project/regex), as it allows for faster execution, but
 defaults back to the standard re module if not.
