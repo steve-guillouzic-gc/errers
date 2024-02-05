@@ -409,9 +409,11 @@ class _MainWindow:
         try:
             help_window = _HelpWindow()
             help_window.transient(self.root)
-            _centre_window(self.root, self.root, help_window)
             _set_icon(help_window)
+            help_window.withdraw()
             help_window.update_idletasks()
+            _centre_window(self.root, self.root, help_window)
+            help_window.deiconify()
             help_window.focus_set()
             help_window.grab_set()
         except Exception:
@@ -462,10 +464,10 @@ class _MainWindow:
             if self._inpath.locked():
                 return
             self._options.transient(self.root)
-            _centre_window(self.root, self.root, self._options)
             _set_icon(self._options)
-            self._options.deiconify()
             self._options.update_idletasks()
+            _centre_window(self.root, self.root, self._options)
+            self._options.deiconify()
             self._options.focus_set()
             self._options.grab_set()
         except Exception:
@@ -814,10 +816,12 @@ class _MainWindow:
                                 q_detected, q_selected)
             else:
                 lang_window = _LanguageWindow(detected, q_selected)
-                _centre_window(self.root, self.root, lang_window)
                 lang_window.transient(self.root)
                 _set_icon(lang_window)
+                lang_window.withdraw()
                 lang_window.update_idletasks()
+                _centre_window(self.root, self.root, lang_window)
+                lang_window.deiconify()
                 lang_window.focus_set()
                 lang_window.grab_set()
         except Exception:
@@ -2577,14 +2581,12 @@ def _centre_window(root, parent, child):
         child -- window to be centred
     """
     system = platform.system()
-    # Child windows are already centred on Linux
+    # Assume child windows are already centred on Linux.
     if system in ('Darwin', 'Windows'):
-        root.eval('tk::PlaceWindow %s widget %s'
-                  % (child.winfo_toplevel(), parent.winfo_toplevel()))
-        # PlaceWindow does not consider titlebar height, so tweak is needed
-        y_shift = {'Darwin': 28, 'Windows': 32}[system]
-        child.geometry('+%d+%d' % (child.winfo_x(),
-                                   child.winfo_y() - y_shift))
+        x_shift = (parent.winfo_width() - child.winfo_reqwidth()) // 2
+        y_shift = (parent.winfo_height() - child.winfo_reqheight()) // 2
+        child.geometry('+%d+%d' % (parent.winfo_x() + x_shift,
+                                   parent.winfo_y() + y_shift))
 
 
 def _show_error(root, parent, message):
@@ -2615,14 +2617,14 @@ def _show_error(root, parent, message):
     dialog.bind('<Return>', lambda e: dialog.destroy())
     dialog.bind('<Escape>', lambda e: dialog.destroy())
     # Show window and wait for acknowledgement
+    dialog.withdraw()
+    dialog.update_idletasks()
     if parent is None:
         root.eval('tk::PlaceWindow %s center' % dialog.winfo_toplevel())
     else:
         dialog.transient(parent)
         _centre_window(root, parent, dialog)
-    _set_icon(dialog)
     dialog.deiconify()
-    dialog.update_idletasks()
     dialog.focus_set()
     dialog.grab_set()
     dialog.wait_window(dialog)
@@ -2664,20 +2666,21 @@ def _ask_yes_no(root, parent, question):
                     command=lambda: set_answer(False))
     yes.grid(row=0, column=0, padx=5)
     no.grid(row=0, column=1, padx=5)
+    _set_icon(dialog)
     # Keyboard shortcuts
     dialog.bind(f'<{MOD_KEY}-y>', lambda e: set_answer(True))
     dialog.bind(f'<{MOD_KEY}-n>', lambda e: set_answer(False))
     dialog.bind('<Return>', lambda e: set_answer(True))
     dialog.bind('<Escape>', lambda e: set_answer(False))
     # Show window and wait for answer
+    dialog.withdraw()
+    dialog.update_idletasks()
     if parent is None:
         root.eval('tk::PlaceWindow %s center' % dialog.winfo_toplevel())
     else:
         dialog.transient(parent)
         _centre_window(root, parent, dialog)
-    _set_icon(dialog)
     dialog.deiconify()
-    dialog.update_idletasks()
     dialog.focus_set()
     dialog.grab_set()
     parent.wait_window(dialog)
