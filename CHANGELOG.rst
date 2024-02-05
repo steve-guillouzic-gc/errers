@@ -30,9 +30,12 @@ Changed
 
 Fixed
 -----
+- Document in help window the use of tab key and spacebar.
 - On Windows, check if a modal dialog box is open in Word before trying to
   import text file.
 - On Windows, reset Word status bar after importing text file.
+- On Windows and Linux, display ERRERS icon in title bar of secondary windows
+  and dialog boxes too.
 - Consolidate all Tkinter code to main thread.
 - Avoid garbage collection of Tkinter objects in non-main threads.
 
