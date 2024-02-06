@@ -150,9 +150,9 @@ _DESCRIPTION = [
         with the underlined letter in the control label. The only exception is
         the Times option, for which the shortcut is {MOD_KEY}+X. In dialog
         boxes, the enter and return keys can also be used for "Yes" and "Ok",
-        while the escape key can be used for "No" and "Cancel". Also, the tab
-        key cycles through controls, and the space bar toggles checkboxes and
-        activates buttons."""),
+        while the escape key can be used for "No" and "Cancel". Finally, the
+        tab key cycles through controls, and the space bar toggles checkboxes
+        and activates buttons."""),
     "More information in user manual:"
 ]
 _MANUAL = 'https://cradpdf.drdc-rddc.gc.ca/PDFS/unc451/p813656_A1b.pdf'
