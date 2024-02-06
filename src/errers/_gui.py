@@ -412,7 +412,7 @@ class _MainWindow:
             _set_icon(help_window)
             help_window.withdraw()
             help_window.update_idletasks()
-            _centre_window(self.root, self.root, help_window)
+            _centre_window(self.root, help_window)
             help_window.deiconify()
             help_window.focus_set()
             help_window.grab_set()
@@ -466,7 +466,7 @@ class _MainWindow:
             self._options.transient(self.root)
             _set_icon(self._options)
             self._options.update_idletasks()
-            _centre_window(self.root, self.root, self._options)
+            _centre_window(self.root, self._options)
             self._options.deiconify()
             self._options.focus_set()
             self._options.grab_set()
@@ -820,7 +820,7 @@ class _MainWindow:
                 _set_icon(lang_window)
                 lang_window.withdraw()
                 lang_window.update_idletasks()
-                _centre_window(self.root, self.root, lang_window)
+                _centre_window(self.root, lang_window)
                 lang_window.deiconify()
                 lang_window.focus_set()
                 lang_window.grab_set()
@@ -2572,17 +2572,15 @@ def _dispatch(prog_id):
     return com_object
 
 
-def _centre_window(root, parent, child):
+def _centre_window(parent, child):
     """Centre one window over another.
 
     Arguments:
-        root -- root Tk window
         parent -- window over which to centre
         child -- window to be centred
     """
-    system = platform.system()
     # Assume child windows are already centred on Linux.
-    if system in ('Darwin', 'Windows'):
+    if platform.system() in ('Darwin', 'Windows'):
         x_shift = (parent.winfo_width() - child.winfo_reqwidth()) // 2
         y_shift = (parent.winfo_height() - child.winfo_reqheight()) // 2
         child.geometry('+%d+%d' % (parent.winfo_x() + x_shift,
@@ -2623,7 +2621,7 @@ def _show_error(root, parent, message):
         root.eval('tk::PlaceWindow %s center' % dialog.winfo_toplevel())
     else:
         dialog.transient(parent)
-        _centre_window(root, parent, dialog)
+        _centre_window(parent, dialog)
     dialog.deiconify()
     dialog.focus_set()
     dialog.grab_set()
@@ -2679,7 +2677,7 @@ def _ask_yes_no(root, parent, question):
         root.eval('tk::PlaceWindow %s center' % dialog.winfo_toplevel())
     else:
         dialog.transient(parent)
-        _centre_window(root, parent, dialog)
+        _centre_window(parent, dialog)
     dialog.deiconify()
     dialog.focus_set()
     dialog.grab_set()
