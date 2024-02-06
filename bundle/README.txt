@@ -67,6 +67,19 @@ To install the resulting standalone application:
    available locations on Windows are Desktop, "Send To" menu, and Start menu.
 6. Copy shortcuts to other locations if desired, such as the Windows taskbar.
 
+Removal
+=======
+
+To remove the standalone application:
+
+1. Open a command prompt and change directory to the errers-VERSION-windows
+   folder, which contains the errers.exe file.
+2. Type ``errers --shortcuts`` at the command prompt and press enter.
+3. In the shortcut-update window that appears, click "Delete" to delete
+   application shortcuts. If shortcuts had been copied to other locations, they
+   must be deleted manually.
+4. Delete the errers-VERSION-windows folder.
+
 Note: Bundled application requires redistributable files from Microsoft Visual
 Studio. Without them, Windows complains about being unable to load the Python
 DLL when starting ERRERS. For applications compiled with Python 3.6 to 3.12,
