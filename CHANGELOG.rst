@@ -38,6 +38,7 @@ Fixed
   and dialog boxes too.
 - Consolidate all Tkinter code to main thread.
 - Avoid garbage collection of Tkinter objects in non-main threads.
+- Dehighlight output filename pattern when exiting field.
 
 3.1.1, 2023-12-22
 =================

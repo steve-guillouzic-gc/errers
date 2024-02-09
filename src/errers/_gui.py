@@ -1651,6 +1651,10 @@ class _TextField:
         if onclick is None:
             self._field = ttk.Entry(frame, textvariable=self._variable,
                                     state='normal')
+            self._field.bind('<FocusIn>',
+                             lambda e: self._field.select_range(0, tk.END))
+            self._field.bind('<FocusOut>',
+                             lambda e: self._field.select_range(0, 0))
         else:
             # Use Label so text can wrap.
             if platform.system() == 'Windows':
@@ -1700,7 +1704,6 @@ class _TextField:
 
     def focus(self):
         """Set focus to this field."""
-        self._field.select_range(0, 1000)
         self._field.focus_set()
 
 
