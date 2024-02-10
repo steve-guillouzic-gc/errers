@@ -40,6 +40,7 @@ Fixed
 - On Windows, reset Word status bar after importing text file.
 - On Windows and Linux, display ERRERS icon in title bar of secondary windows
   and dialog boxes too.
+- On Linux, fix bug in determination of initial size of main window.
 - Consolidate all Tkinter code to main thread.
 - Avoid garbage collection of Tkinter objects in non-main threads.
 

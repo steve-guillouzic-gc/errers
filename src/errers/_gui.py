@@ -2048,8 +2048,8 @@ class _LogBox:
         scrollbar = ttk.Scrollbar(root, command=self._text.yview)
         self._text['yscrollcommand'] = scrollbar.set
         row = root.grid_size()[1]
-        self._text.grid(row=row, column=0, columnspan=2, sticky='news')
-        scrollbar.grid(row=row, column=2, sticky='news')
+        self._text.grid(row=row, column=0, sticky='news')
+        scrollbar.grid(row=row, column=1, sticky='news')
         # Create tags for line formatting
         font = tk.font.nametofont(name=self._text.cget('font'))
         indent = font.measure('CRITICAL - ')
