@@ -216,7 +216,7 @@ Additional information
 ======================
 
 More information can be found in the user manual:
-https://cradpdf.drdc-rddc.gc.ca/PDFS/unc451/p813656_A1b.pdf.
+https://cradpdf.drdc-rddc.gc.ca/PDFS/unc459/p813656_A1b.pdf.
 
 A list of changes from one version to the next is provided in the change log:
 https://github.com/steve-guillouzic-gc/errers/blob/main/CHANGELOG.rst.
