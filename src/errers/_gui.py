@@ -119,6 +119,21 @@ if platform.system() == 'Darwin':
 else:
     MOD_KEY = 'Alt'
     _NOTE_URL = 'Note: left-click to open links; right-click to copy.'
+if platform.system() == 'Windows':
+    # control | alt | windows 
+    MOD_PASS_THRU = 0x4 | 0x20000 | 0x40000
+    # control + alt = right alt
+    MOD_CATCH = 0x20004
+elif platform.system() == 'Darwin':
+    # control | command | option | function
+    # option (0x10) not ignored as it is used to enter text
+    MOD_PASS_THRU = 0x4 | 0x8 | 0x40
+    MOD_CATCH = None
+else:  # Linux
+    # control | alt | windows | right_alt
+    # right-alt (0x80) not ignored as it is used to enter text
+    MOD_PASS_THRU = 0x4 | 0x8 | 0x40
+    MOD_CATCH = None
 _UNEXPECTED = 'Unexpected error: please report to developer.'
 _UNEXPECTED_CONSOLE = ('Unexpected error: details written to console window. '
                        'Please report to developer.')
@@ -264,7 +279,7 @@ class _MainWindow:
                                        init_trace, init_verbose, init_auto,
                                        init_default, init_local, init_re,
                                        init_timeout, self.set_option_list,
-                                       self.root.focus_set)
+                                       lambda: self._opt_list.focus())
         self._options.withdraw()
         # Configure main window
         root.title('%s %s' % (errers.SHORTNAME, errers.__version__))
@@ -326,7 +341,6 @@ class _MainWindow:
         frame.grid_rowconfigure(1, weight=1)
         frame.grid_columnconfigure(1, weight=1)
         # Set initial value and wrap length of input field.
-        self._inpath.set_wraplength()
         if init_inpath is None:
             self._inpath.set(_CLICK_INPUT_FILE)
             self._status.set(_FILENAME_REQUIRED)
@@ -338,7 +352,6 @@ class _MainWindow:
         else:
             self._inpath.set(init_inpath)
         # Set initial value and wrap length of option list
-        self._opt_list.set_wraplength()
         self._opt_list.set(self._options.list())
         # Set minimum size
         root.update()
@@ -449,6 +462,7 @@ class _MainWindow:
                 self.reset()
                 self.root.update()
                 self.set_minsize()
+            self._inpath.focus()
         except Exception:
             _misc_logger.exception(_UNEXPECTED)
 
@@ -483,13 +497,17 @@ class _MainWindow:
         self.reset()
         self.root.update()
         self.set_minsize()
-        self.root.focus_set()
+        self._opt_list.focus()
 
     def start_extraction(self):
         """Start LaTeX to text extraction in separate thread."""
         # pylint: disable=broad-except
         # Reason: exception logged
         try:
+            # Reset modification flag of input fields.
+            self._inpath._field.edit_modified(False)
+            self._outpattern._field.edit_modified(False)
+            self._opt_list._field.edit_modified(False)
             # Check if input file path is valid.
             if not Path(self._inpath.get()).is_file():
                 _show_error(root=self.root, parent=self.root,
@@ -1619,14 +1637,16 @@ class _TextField:
         __init__ -- initializer
         get -- return value of text field
         set -- set value of text field
-        set_wraplength -- set wrap length to current width
         unlock -- unlock field
         lock -- lock field
         focus -- select text and move focus to widget
+        next_widget -- move focus to next widget
+        previous_widget -- move focus to previous widget
+        keypress -- handle key presses
 
     Attribute:
-        _variable -- variable tied to text field
         _field -- text field
+        _onclick -- handler function for when user clicks on text field
     """
 
     def __init__(self, root, initial, text, *, description='', onclick=None,
@@ -1644,29 +1664,13 @@ class _TextField:
             onedit -- handler function for when user edits field value
             underline -- index of character to underline
         """
-        self._variable = tk.StringVar()
-        self._variable.set(initial)
         label = ttk.Label(root, text=text, underline=underline)
         frame = ttk.Frame(root)
-        if onclick is None:
-            self._field = ttk.Entry(frame, textvariable=self._variable,
-                                    state='normal')
-            self._field.bind('<FocusIn>',
-                             lambda e: self._field.select_range(0, tk.END))
-            self._field.bind('<FocusOut>',
-                             lambda e: self._field.select_range(0, 0))
-        else:
-            # Use Label so text can wrap.
-            if platform.system() == 'Windows':
-                relief = 'solid'
-            else:
-                relief = 'sunken'
-            self._field = ttk.Label(frame, textvariable=self._variable,
-                                    state='readonly', background='white',
-                                    relief=relief, padding=1,
-                                    style='Field.TLabel', width=80)
-        if onedit is not None:
-            self._variable.trace('w', lambda *args: onedit())
+        self._onclick = onclick
+        self._field = tk.Text(frame, width=30, height=1, wrap=tk.WORD,
+                              relief=tk.FLAT, highlightthickness=1,
+                              highlightbackground='grey70',
+                              font=tk.font.nametofont('TkDefaultFont'))
         desc = ttk.Label(frame, text=description)
         row = root.grid_size()[1]
         label.grid(row=row, column=0, padx=5, sticky='nes')
@@ -1675,20 +1679,34 @@ class _TextField:
         desc.grid(row=0, column=1, padx=2.5 if description == '' else 5,
                   sticky='nws')
         frame.grid_columnconfigure(0, weight=1)
+        self._field.update_idletasks()
+        self.set(initial)
+        if onclick is None:
+            # Prevent newline characters from being entered. The keypress
+            # method takes care of it when onclick is present.
+            self._field.bind('<Return>', lambda e: 'break')
+        else:
+            self._field.config(insertofftime=10, insertontime=0)
+            self._field.bind('<Key>', self.keypress)
+        self._field.bind('<Tab>', self.next_widget)
+        self._field.bind('<Shift-Tab>', self.previous_widget)
         if onclick is not None:
             self._field.bind('<Button-1>', onclick)
+        if onedit is not None:
+            self._field.bind('<<Modified>>', lambda *args: onedit())
 
     def get(self):
         """Return value of text field."""
-        return self._variable.get()
+        return self._field.get('1.0', 'end-1c')
 
     def set(self, value):
         """Set value of text field."""
-        return self._variable.set(value)
-
-    def set_wraplength(self):
-        """Set wrap length to current width."""
-        self._field.config(wraplength=self._field.winfo_width())
+        self._field.delete('1.0', 'end')
+        self._field.insert("1.0", value)
+        # Set field height to number of display lines.
+        tcl_command = '%s count -update -displaylines 1.0 end' % self._field
+        display_lines = int(self._field.tk.eval(tcl_command))
+        self._field.configure(height=display_lines)
 
     def unlock(self):
         """Unlock field."""
@@ -1705,6 +1723,34 @@ class _TextField:
     def focus(self):
         """Set focus to this field."""
         self._field.focus_set()
+
+    def next_widget(self, event):
+        """Move focus to next widget."""
+        event.widget.tk_focusNext().focus()
+        return 'break'
+
+    def previous_widget(self, event):
+        """Move focus to previous widget."""
+        event.widget.tk_focusPrev().focus()
+        return 'break'
+
+    def keypress(self, event):
+        """Handle key presses."""
+        # Non-modified keys trigger on-click response.
+        if (len(event.char) > 1 or event.keysym in ('Return', 'Escape', 
+                                                    'BackSpace', 'Insert',
+                                'Delete', 'Prior', 'Next', 'Home', 'End',
+                                 'Left', 'Right', 'Up', 'Down', 'KP_Enter',
+                                 'KP_Prior', 'KP_Next', 'KP_Home', 'KP_End',
+                                'KP_Insert', 'KP_Delete')):
+            _misc_logger.error('Got it!')
+            return 'break'
+        elif len(event.char) == 1 and (
+                not(event.state & MOD_PASS_THRU)
+                or (MOD_CATCH is not None
+                    and event.state & MOD_CATCH == MOD_CATCH)):
+            self._onclick(event)
+            return 'break'
 
 
 class _PositiveField:
