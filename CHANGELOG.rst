@@ -27,6 +27,10 @@ Changed
   available, defaulting back to the old grammar and spell checker if not.
 - On Windows and macOS, open help, options and language windows centered on
   main window. (This was already the case on Linux.)
+- Enable navigation to input path and option list using tab key.
+- Improve look-and-feel consistency of input fields in main window (especially
+  apparent on macOS).
+- Turn-off auto-selection of output path pattern when entering field.
 
 Fixed
 -----
@@ -38,7 +42,6 @@ Fixed
   and dialog boxes too.
 - Consolidate all Tkinter code to main thread.
 - Avoid garbage collection of Tkinter objects in non-main threads.
-- Dehighlight output filename pattern when exiting field.
 
 3.1.1, 2023-12-22
 =================
