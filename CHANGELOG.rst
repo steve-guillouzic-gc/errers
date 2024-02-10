@@ -41,6 +41,8 @@ Fixed
 - On Windows and Linux, display ERRERS icon in title bar of secondary windows
   and dialog boxes too.
 - On Linux, fix bug in determination of initial size of main window.
+- On macOS, eliminate duplicate icon displayed in Dock when launching from
+  application shortcut.
 - Consolidate all Tkinter code to main thread.
 - Avoid garbage collection of Tkinter objects in non-main threads.
 
