@@ -1638,6 +1638,7 @@ class _TextField:
         __init__ -- initializer
         get -- return value of text field
         set -- set value of text field
+        adjust_height -- adjust field height to fit content
         unlock -- unlock field
         lock -- lock field
         focus -- select text and move focus to widget
@@ -1683,9 +1684,11 @@ class _TextField:
         self._field.update_idletasks()
         self.set(initial)
         if onclick is None:
-            # Prevent newline characters from being entered. The keypress
-            # method takes care of it when onclick is present.
+            # Prevent newline characters from being entered, and adjust field
+            # height automatically. The keypress method takes care of both
+            # when onclick is present.
             self._field.bind('<Return>', lambda e: 'break')
+            self._field.bind('<KeyRelease>', lambda e: self.adjust_height())
         else:
             self._field.config(insertofftime=10, insertontime=0)
             self._field.bind('<Key>', self.keypress)
@@ -1704,7 +1707,10 @@ class _TextField:
         """Set value of text field."""
         self._field.delete('1.0', 'end')
         self._field.insert("1.0", value)
-        # Set field height to number of display lines.
+        self.adjust_height()
+
+    def adjust_height(self):
+        """Adjust field height to fit content."""
         tcl_command = '%s count -update -displaylines 1.0 end' % self._field
         display_lines = int(self._field.tk.eval(tcl_command))
         self._field.configure(height=display_lines)
