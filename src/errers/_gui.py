@@ -121,19 +121,19 @@ else:
     _NOTE_URL = 'Note: left-click to open links; right-click to copy.'
 if platform.system() == 'Windows':
     # control | alt | windows 
-    MOD_PASS_THRU = 0x4 | 0x20000 | 0x40000
+    MOD_IGNORE = 0x4 | 0x20000 | 0x40000
     # control + alt = right alt
-    MOD_CATCH = 0x20004
+    MOD_ALLOW = 0x20004
 elif platform.system() == 'Darwin':
     # control | command | option | function
     # option (0x10) not ignored as it is used to enter text
-    MOD_PASS_THRU = 0x4 | 0x8 | 0x40
-    MOD_CATCH = None
+    MOD_IGNORE = 0x4 | 0x8 | 0x40
+    MOD_ALLOW = None
 else:  # Linux
     # control | alt | windows | right_alt
     # right-alt (0x80) not ignored as it is used to enter text
-    MOD_PASS_THRU = 0x4 | 0x8 | 0x40
-    MOD_CATCH = None
+    MOD_IGNORE = 0x4 | 0x8 | 0x40
+    MOD_ALLOW = None
 _UNEXPECTED = 'Unexpected error: please report to developer.'
 _UNEXPECTED_CONSOLE = ('Unexpected error: details written to console window. '
                        'Please report to developer.')
@@ -1738,18 +1738,18 @@ class _TextField:
     def keypress(self, event):
         """Handle key presses."""
         # Non-modified keys trigger on-click response.
-        if (len(event.char) > 1 or event.keysym in ('Return', 'Escape', 
-                                                    'BackSpace', 'Insert',
+        if (len(event.char) > 1
+            or event.keysym in ('Return', 'Escape', 'BackSpace', 'Insert',
                                 'Delete', 'Prior', 'Next', 'Home', 'End',
-                                 'Left', 'Right', 'Up', 'Down', 'KP_Enter',
-                                 'KP_Prior', 'KP_Next', 'KP_Home', 'KP_End',
+                                'Left', 'Right', 'Up', 'Down', 'KP_Enter',
+                                'KP_Prior', 'KP_Next', 'KP_Home', 'KP_End',
                                 'KP_Insert', 'KP_Delete')):
-            _misc_logger.error('Got it!')
             return 'break'
-        elif len(event.char) == 1 and (
-                not(event.state & MOD_PASS_THRU)
-                or (MOD_CATCH is not None
-                    and event.state & MOD_CATCH == MOD_CATCH)):
+        elif (event.state & MOD_IGNORE
+              and not (MOD_ALLOW is not None
+                       and event.state & MOD_ALLOW == MOD_ALLOW)):
+            return 'break'
+        elif len(event.char) == 1:
             self._onclick(event)
             return 'break'
 
