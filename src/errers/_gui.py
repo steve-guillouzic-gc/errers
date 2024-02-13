@@ -1559,8 +1559,9 @@ class _ShortcutWindow:
                 doc_types = info['CFBundleDocumentTypes']
                 doc_extensions = doc_types[0]['CFBundleTypeExtensions']
                 doc_extensions[0] = 'tex'
+                info['CFBundleName'] = 'ERRERS'
                 info['CFBundleIconFile'] = 'errers'
-                info['LSUIElement'] = 1
+                info['LSUIElement'] = True
             with open(info_plist, 'wb') as info_file:
                 plistlib.dump(info, info_file)
             shutil.copytree(str(tmp), str(final))
