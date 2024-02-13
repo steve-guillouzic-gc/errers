@@ -348,16 +348,26 @@ class _MainWindow:
         self.set_minsize()
         # Keyboard shortcuts
         root.bind(f'<{MOD_KEY}-i>', self.ask_input_file)
+        root.bind(f'<{MOD_KEY}-I>', self.ask_input_file)
         root.bind(f'<{MOD_KEY}-o>', lambda e: self._outpattern.focus())
+        root.bind(f'<{MOD_KEY}-O>', lambda e: self._outpattern.focus())
         root.bind(f'<{MOD_KEY}-n>', self.ask_options)
+        root.bind(f'<{MOD_KEY}-N>', self.ask_options)
         root.bind(f'<{MOD_KEY}-e>', lambda e: self.press('extract'))
+        root.bind(f'<{MOD_KEY}-E>', lambda e: self.press('extract'))
         root.bind(f'<{MOD_KEY}-c>', lambda e: self.press('copy text'))
+        root.bind(f'<{MOD_KEY}-C>', lambda e: self.press('copy text'))
         root.bind(f'<{MOD_KEY}-y>', lambda e: self.press('copy log'))
+        root.bind(f'<{MOD_KEY}-Y>', lambda e: self.press('copy log'))
         root.bind(f'<{MOD_KEY}-r>', lambda e: self.press('reset'))
+        root.bind(f'<{MOD_KEY}-R>', lambda e: self.press('reset'))
         root.bind(f'<{MOD_KEY}-h>', lambda e: self.press('help'))
+        root.bind(f'<{MOD_KEY}-H>', lambda e: self.press('help'))
         root.bind(f'<{MOD_KEY}-q>', lambda e: self.press('quit'))
+        root.bind(f'<{MOD_KEY}-Q>', lambda e: self.press('quit'))
         if 'win32com.client' in sys.modules:
             root.bind(f'<{MOD_KEY}-k>', lambda e: self.press('check'))
+            root.bind(f'<{MOD_KEY}-K>', lambda e: self.press('check'))
 
     def press(self, button_name):
         """Visually press button and invoke handler.
@@ -911,6 +921,7 @@ class _HelpWindow(tk.Toplevel):
         _ButtonRow(description, buttons)
         # Keyboard shortcuts
         self.bind(f'<{MOD_KEY}-o>', lambda e: self.destroy())
+        self.bind(f'<{MOD_KEY}-O>', lambda e: self.destroy())
         self.bind('<Return>', lambda e: self.destroy())
         self.bind('<Escape>', lambda e: self.destroy())
 
@@ -1037,17 +1048,29 @@ class _OptionsWindow(tk.Toplevel):
         self._values = [option.get() for option in self._options]
         # Keyboard shortcuts
         self.bind(f'<{MOD_KEY}-p>', lambda e: self.patterns.toggle())
+        self.bind(f'<{MOD_KEY}-P>', lambda e: self.patterns.toggle())
         self.bind(f'<{MOD_KEY}-s>', lambda e: self.steps.toggle())
+        self.bind(f'<{MOD_KEY}-S>', lambda e: self.steps.toggle())
         self.bind(f'<{MOD_KEY}-x>', lambda e: self.times.toggle())
+        self.bind(f'<{MOD_KEY}-X>', lambda e: self.times.toggle())
         self.bind(f'<{MOD_KEY}-t>', lambda e: self.trace.toggle())
+        self.bind(f'<{MOD_KEY}-T>', lambda e: self.trace.toggle())
         self.bind(f'<{MOD_KEY}-v>', lambda e: self.verbose.toggle())
+        self.bind(f'<{MOD_KEY}-V>', lambda e: self.verbose.toggle())
         self.bind(f'<{MOD_KEY}-a>', lambda e: self.noauto.toggle())
+        self.bind(f'<{MOD_KEY}-A>', lambda e: self.noauto.toggle())
         self.bind(f'<{MOD_KEY}-d>', lambda e: self.nodefault.toggle())
+        self.bind(f'<{MOD_KEY}-D>', lambda e: self.nodefault.toggle())
         self.bind(f'<{MOD_KEY}-l>', lambda e: self.nolocal.toggle())
+        self.bind(f'<{MOD_KEY}-L>', lambda e: self.nolocal.toggle())
         self.bind(f'<{MOD_KEY}-m>', lambda e: self.re.toggle())
+        self.bind(f'<{MOD_KEY}-M>', lambda e: self.re.toggle())
         self.bind(f'<{MOD_KEY}-u>', lambda e: self.timeout.focus())
+        self.bind(f'<{MOD_KEY}-U>', lambda e: self.timeout.focus())
         self.bind(f'<{MOD_KEY}-o>', lambda e: self.on_ok())
+        self.bind(f'<{MOD_KEY}-O>', lambda e: self.on_ok())
         self.bind(f'<{MOD_KEY}-c>', lambda e: self.on_cancel())
+        self.bind(f'<{MOD_KEY}-C>', lambda e: self.on_cancel())
         self.bind('<Return>', lambda e: self.on_ok())
         self.bind('<Escape>', lambda e: self.on_cancel())
 
@@ -1158,7 +1181,9 @@ class _LanguageWindow(tk.Toplevel):
         _ButtonRow(languages, buttons)
         # Keyboard shortcuts
         self.bind(f'<{MOD_KEY}-o>', lambda e: self.on_ok())
+        self.bind(f'<{MOD_KEY}-O>', lambda e: self.on_ok())
         self.bind(f'<{MOD_KEY}-c>', lambda e: self.on_cancel())
+        self.bind(f'<{MOD_KEY}-C>', lambda e: self.on_cancel())
         self.bind('<Return>', lambda e: self.on_ok())
         self.bind('<Escape>', lambda e: self.on_cancel())
 
@@ -1250,8 +1275,11 @@ class _ShortcutWindow:
                            ('cancel', 'Cancel', 2,
                             self.root.destroy, 'normal')])
         root.bind(f'<{MOD_KEY}-c>', lambda e: self.start_update())
+        root.bind(f'<{MOD_KEY}-C>', lambda e: self.start_update())
         root.bind(f'<{MOD_KEY}-d>', lambda e: self.start_update(delete=True))
+        root.bind(f'<{MOD_KEY}-D>', lambda e: self.start_update(delete=True))
         root.bind(f'<{MOD_KEY}-n>', lambda e: root.destroy())
+        root.bind(f'<{MOD_KEY}-N>', lambda e: root.destroy())
         root.bind('<Return>', lambda e: self.start_update())
         root.bind('<Escape>', lambda e: root.destroy())
 
@@ -2728,6 +2756,7 @@ def _show_error(root, parent, message):
     _set_icon(dialog)
     # Keyboard shortcuts
     dialog.bind(f'<{MOD_KEY}-o>', lambda e: dialog.destroy())
+    dialog.bind(f'<{MOD_KEY}-O>', lambda e: dialog.destroy())
     dialog.bind('<Return>', lambda e: dialog.destroy())
     dialog.bind('<Escape>', lambda e: dialog.destroy())
     # Show window and wait for acknowledgement
@@ -2783,7 +2812,9 @@ def _ask_yes_no(root, parent, question):
     _set_icon(dialog)
     # Keyboard shortcuts
     dialog.bind(f'<{MOD_KEY}-y>', lambda e: set_answer(True))
+    dialog.bind(f'<{MOD_KEY}-Y>', lambda e: set_answer(True))
     dialog.bind(f'<{MOD_KEY}-n>', lambda e: set_answer(False))
+    dialog.bind(f'<{MOD_KEY}-N>', lambda e: set_answer(False))
     dialog.bind('<Return>', lambda e: set_answer(True))
     dialog.bind('<Escape>', lambda e: set_answer(False))
     # Show window and wait for answer

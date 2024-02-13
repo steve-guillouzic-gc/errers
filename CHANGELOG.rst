@@ -35,6 +35,7 @@ Changed
 Fixed
 -----
 - Document in help window the use of tab key and spacebar.
+- Make key bindings case insensitive.
 - On Windows, check if a modal dialog box is open in Word before trying to
   import text file.
 - On Windows, reset Word status bar after importing text file.
