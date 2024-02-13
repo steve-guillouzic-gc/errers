@@ -1542,12 +1542,13 @@ class _ShortcutWindow:
             executable = Path(sys.executable).parent.joinpath('errers')
             script = textwrap.dedent(f"""\
                 on run
-                    do shell script "{executable}"
+                    do shell script "{executable} &>/dev/null &"
                 end run
 
                 on open LaTeX_file
                     set LaTeX_path to POSIX path of LaTeX_file
-                    do shell script "{executable} --gui " & LaTeX_path
+                    set command to "{executable} --gui " & LaTeX_path
+                    do shell script command & " &>/dev/null &"
                 end open""")
             folder.mkdir(parents=True, exist_ok=True)
             sp.run(['osacompile', '-o', str(tmp)], input=script,
