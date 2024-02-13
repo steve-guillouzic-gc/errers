@@ -119,21 +119,6 @@ if platform.system() == 'Darwin':
 else:
     MOD_KEY = 'Alt'
     _NOTE_URL = 'Note: left-click to open links; right-click to copy.'
-if platform.system() == 'Windows':
-    # control | alt | windows 
-    MOD_IGNORE = 0x4 | 0x20000 | 0x40000
-    # control + alt = right alt
-    MOD_ALLOW = 0x20004
-elif platform.system() == 'Darwin':
-    # control | command | option | function
-    # option (0x10) not ignored as it is used to enter text
-    MOD_IGNORE = 0x4 | 0x8 | 0x40
-    MOD_ALLOW = None
-else:  # Linux
-    # control | alt | windows | right_alt
-    # right-alt (0x80) not ignored as it is used to enter text
-    MOD_IGNORE = 0x4 | 0x8 | 0x40
-    MOD_ALLOW = None
 _UNEXPECTED = 'Unexpected error: please report to developer.'
 _UNEXPECTED_CONSOLE = ('Unexpected error: details written to console window. '
                        'Please report to developer.')
@@ -1644,6 +1629,11 @@ class _TextField:
         focus -- select text and move focus to widget
         next_widget -- move focus to next widget
         previous_widget -- move focus to previous widget
+        mod_windows -- indicate how modifier keys should be handled on Windows
+        mod_macos -- indicate how modifier keys should be handled on macOS
+        mod_linux -- indicate how modifier keys should be handled on Linux
+        modifiers -- indicate how modifier keys should be handled on this
+            platform (set dynamically)
         keypress -- handle key presses
 
     Attribute:
@@ -1741,22 +1731,92 @@ class _TextField:
         event.widget.tk_focusPrev().focus()
         return 'break'
 
+    def mod_windows(self, state):
+        """Indicate how modifier keys should be handled on Windows.
+
+        Arguments:
+            state -- state of modifier keys reported by event
+
+        Return 'block', 'dialog', or 'pass' depending on whether the character 
+        should be blocked, trigger the dialog box, or let through.
+        """
+        shift = bool(state & 0x1)
+        right_alt = state & 0x20004 == 0x20004
+        left_alt = state & 0x20000 and not right_alt
+        control = state & 0x4 and not right_alt
+        if control or (shift + right_alt + left_alt) > 1:
+            return 'block'
+        elif left_alt:
+            return 'pass'
+        else:
+            return 'dialog'
+
+    def mod_macos(self, state):
+        """Indicate how modifier keys should be handled on macOS.
+
+        Arguments:
+            state -- state of modifier keys reported by event
+
+        Return 'block', 'dialog', or 'pass' depending on whether the character 
+        should be blocked, trigger the dialog box, or let through.
+        """
+        shift = bool(state & 0x1)
+        control = bool(state & 0x4)
+        command = bool(state & 0x8)
+        option = bool(state & 0x10)
+        function = bool(state & 0x40)
+        if command or function:
+            return 'block'
+        elif control:
+            return 'pass'
+        else:
+            return 'dialog'
+
+    def mod_linux(self, state):
+        """Indicate how modifier keys should be handled on Linux.
+
+        Arguments:
+            state -- state of modifier keys reported by event
+
+        Return 'block', 'dialog', or 'pass' depending on whether the character 
+        should be blocked, trigger the dialog box, or let through.
+        """
+        shift = bool(state & 0x1)
+        control = bool(state & 0x4)
+        left_alt = bool(state & 0x8)
+        windows = bool(state & 0x40)
+        right_alt = bool(state & 0x80)
+        if control or windows or (shift + left_alt + right_alt) > 1:
+            return 'block'
+        elif left_alt:
+            return 'pass'
+        else:
+            return 'dialog'
+
+    if platform.system() == 'Windows':
+        modifiers = mod_windows
+    elif platform.system() == 'Darwin':
+        modifiers = mod_macos
+    else:
+        modifiers = mod_linux
+
     def keypress(self, event):
         """Handle key presses."""
         # Non-modified keys trigger on-click response.
-        if (len(event.char) > 1
+        mod_category = self.modifiers(event.state)
+        if (mod_category == 'block'
             or event.keysym in ('Return', 'Escape', 'BackSpace', 'Insert',
                                 'Delete', 'Prior', 'Next', 'Home', 'End',
                                 'Left', 'Right', 'Up', 'Down', 'KP_Enter',
                                 'KP_Prior', 'KP_Next', 'KP_Home', 'KP_End',
                                 'KP_Insert', 'KP_Delete')):
             return 'break'
-        elif (event.state & MOD_IGNORE
-              and not (MOD_ALLOW is not None
-                       and event.state & MOD_ALLOW == MOD_ALLOW)):
-            return 'break'
-        elif len(event.char) == 1:
-            self._onclick(event)
+        elif mod_category == 'pass' or event.keysym[-3:] == 'Tab':
+            return
+        else:
+            # mod_category == 'dialog'
+            if len(event.char) >= 1:
+                self._onclick(event)
             return 'break'
 
 
