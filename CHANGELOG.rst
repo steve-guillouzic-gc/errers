@@ -21,6 +21,7 @@ Added
 
 Changed
 -------
+- Display name of input file in title bar when specified.
 - On Windows, replace "Send To" shortcut by entry in "Open With" menu. Creating
   the latter does not require the pywin32 package.
 - On Windows, when clicking the "Check" button, open the modern Editor tool if

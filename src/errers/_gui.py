@@ -208,6 +208,7 @@ class _MainWindow:
         __init__ -- window initializer
         reset -- reset GUI to prepare for new extraction
         set_minsize -- set minimum window size
+        set_title -- set window title
         ask_input_file -- prompt user for input file
         start_extraction -- start thread for LaTeX to text extraction
         run_extraction -- extract text from LaTeX file
@@ -267,7 +268,6 @@ class _MainWindow:
                                        lambda: self._opt_list.focus())
         self._options.withdraw()
         # Configure main window
-        root.title('%s %s' % (errers.SHORTNAME, errers.__version__))
         root.grid_rowconfigure(0, weight=1)
         root.grid_columnconfigure(0, weight=1)
         frame = ttk.Frame(root)
@@ -336,6 +336,7 @@ class _MainWindow:
             self._status.set(_FILENAME_REQUIRED)
         else:
             self._inpath.set(init_inpath)
+        self.set_title()
         # Set initial value and wrap length of option list
         self._opt_list.set(self._options.list())
         # Set minimum size
@@ -410,6 +411,19 @@ class _MainWindow:
                           + self._inpath._field.winfo_height()
                           + self._opt_list._field.winfo_height() + 180)
 
+    def set_title(self):
+        """Set window title.
+
+        Title is set to file name if available, and to application name 
+        otherwise.
+        """
+        inpath = Path(self._inpath.get())
+        if _app.valid_input_file(inpath):
+            title = inpath.stem
+        else:
+            title = '%s %s' % (errers.SHORTNAME, errers.__version__)
+        self.root.title(title)
+
     def help(self):
         """Show help window."""
         # pylint: disable=broad-except
@@ -454,6 +468,7 @@ class _MainWindow:
                 # Path.resolve is needed because tk_askopenfilename always uses
                 # a forward slash as directory separator.
                 self._inpath.set(Path(filename).resolve())
+                self.set_title()
                 self.reset()
                 self.root.update()
                 self.set_minsize()
@@ -508,6 +523,7 @@ class _MainWindow:
                 _show_error(root=self.root, parent=self.root,
                             message=_INVALID_INPUT_FILE)
                 self._inpath.set(_CLICK_INPUT_FILE)
+                self.set_title()
                 self._status.set(_FILENAME_REQUIRED)
                 return
             # Check if pattern for name of output file is valid.
