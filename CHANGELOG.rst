@@ -9,7 +9,7 @@
 ERRERS: Change Log
 ==================
 
-3.2, unreleased
+3.2, 2024-02-14
 ===============
 
 Added
