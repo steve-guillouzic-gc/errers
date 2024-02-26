@@ -731,8 +731,8 @@ class _MainWindow:
         # pylint: disable=broad-except
         # Reason: exception logged
         try:
-            q_detected = queue.SimpleQueue()
-            q_selected = queue.SimpleQueue()
+            q_detected = queue.Queue()
+            q_selected = queue.Queue()
             _BackgroundTask(self.root, 'document_review',
                             task=self.run_check,
                             args=(q_detected, q_selected),
@@ -2170,7 +2170,7 @@ class _LogBox:
         self._text.tag_configure('other', lmargin1=indent, lmargin2=indent)
         # Create queue for inter-thread communication and schedule monitoring
         # task
-        self._queue = queue.SimpleQueue()
+        self._queue = queue.Queue()
         root.after(0, self._monitor_queue)
 
     def write(self, string):
