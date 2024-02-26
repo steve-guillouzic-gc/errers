@@ -16,6 +16,7 @@ ERRERS: Change Log
   environments.
 - On Linux, create directory for user-specific applications if needed, rather
   than give up on creating shortcut.
+- On Linux, add missing newline character at end of shortcut file.
 
 3.2, 2024-02-14
 ===============

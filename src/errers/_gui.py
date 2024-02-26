@@ -1604,7 +1604,7 @@ class _ShortcutWindow:
                 Icon={icon}
                 Exec={executable} --gui %f
                 MimeType=text/x-tex
-                Categories=Utility""")
+                Categories=Utility\n""")
             file_path.parent.mkdir(parents=True, exist_ok=True)
             file_path.write_text(content)
             if chmod:
