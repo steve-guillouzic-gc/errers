@@ -11,6 +11,7 @@ ERRERS: Change Log
 
 3.2.1, unreleased
 =================
+- Fix bug in \\url rule (forbid closing bracket as opening delimiter).
 - Fix bug, introduced in version 3.2, that crashed GUI in Python 3.6.
 - On Linux, fix bug in grouping of application windows in some desktop
   environments.

@@ -1791,6 +1791,7 @@ def package_url_removal(*, Rule, RuleList, not_escaped, **_):
         Rule(r"""
              \\url(?![a-zA-Z])  # Command name (not followed by letter)
              \s*+               # Optional space
+             (?!})              # Forbid closing bracket as opening delimiter
              (?P<delim>.)       # Opening delimiter
              (?P<url>(?s:.)*?)  # URL
              (?P=delim)         # Closing delimiter
