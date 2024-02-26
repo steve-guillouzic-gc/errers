@@ -14,6 +14,8 @@ ERRERS: Change Log
 - Fix bug, introduced in version 3.2, that crashed GUI in Python 3.6.
 - On Linux, fix bug in grouping of application windows in some desktop
   environments.
+- On Linux, create directory for user-specific applications if needed, rather
+  than give up on creating shortcut.
 
 3.2, 2024-02-14
 ===============

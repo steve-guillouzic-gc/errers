@@ -1382,12 +1382,11 @@ class _ShortcutWindow:
                         ft.partial(cls.update_linux,
                                    file_path=home.joinpath(short),
                                    chmod=True)}
-        if menu.exists():
-            updaters['Application menu (under Utilities) '
-                     'and "Open With" menu'] \
-                    = ft.partial(cls.update_linux,
-                                 file_path=menu.joinpath(full),
-                                 chmod=False)
+        updaters['Application menu (under Utilities) '
+                 'and "Open With" menu'] \
+                = ft.partial(cls.update_linux,
+                             file_path=menu.joinpath(full),
+                             chmod=False)
         message = textwrap.dedent(f"""\
             For instance, dragging a LaTeX file and dropping it on a desktop
             shortcut launches the application GUI with the input file path
@@ -1606,6 +1605,7 @@ class _ShortcutWindow:
                 Exec={executable} --gui %f
                 MimeType=text/x-tex
                 Categories=Utility""")
+            file_path.parent.mkdir(parents=True, exist_ok=True)
             file_path.write_text(content)
             if chmod:
                 os.chmod(file_path,
