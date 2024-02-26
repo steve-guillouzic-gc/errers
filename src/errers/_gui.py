@@ -1382,8 +1382,11 @@ class _ShortcutWindow:
                         ft.partial(cls.update_linux,
                                    file_path=home.joinpath(short),
                                    chmod=True)}
-        updaters['Application menu (under Utilities) '
-                 'and "Open With" menu'] \
+        if Path('/mnt/chromeos').exists():
+            menu_label = 'Application launcher (under Linux apps)'
+        else:
+            menu_label = 'Application menu (under Accessories or Utilities)'
+        updaters[f'{menu_label} and "Open With" menu'] \
                 = ft.partial(cls.update_linux,
                              file_path=menu.joinpath(full),
                              chmod=False)
