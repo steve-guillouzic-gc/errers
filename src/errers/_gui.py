@@ -2636,7 +2636,7 @@ def run(init_inpath=None, *, init_outpattern=_app.OUTPATTERN,
     if platform.system() == 'Windows':
         ctypes.windll.shcore.SetProcessDpiAwareness(1)
     try:
-        root = tk.Tk()
+        root = tk.Tk(className=f'ca.gc.drdc_rddc.{errers.SHORTNAME}')
         root.withdraw()
         _set_icon(root)
         if platform.system() == 'Darwin':

@@ -12,6 +12,8 @@ ERRERS: Change Log
 3.2.1, unreleased
 =================
 - Fix bug, introduced in version 3.2, that crashed GUI in Python 3.6.
+- On Linux, fix bug in grouping of application windows in some desktop
+  environments.
 
 3.2, 2024-02-14
 ===============
