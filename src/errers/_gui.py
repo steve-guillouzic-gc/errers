@@ -657,15 +657,13 @@ class _MainWindow:
             try:
                 try:
                     self._outname = future.result()
-                    self._btn_main['copy text'].config(
-                            state='normal')
+                    self._btn_main['copy text'].config(state='normal')
                     if 'win32com.client' in sys.modules:
-                        self._btn_main['check'].config(
-                                state='normal')
+                        self._btn_main['check'].config(state='normal')
                 except Exception:
                     self._outname = outroot.with_suffix('.txt')
-                    self._btn_main['extract'].config(
-                            text='Error', underline=-1)
+                    self._btn_main['extract'].config(text='Error',
+                                                     underline=-1)
                     raise
             except (_engine.extractor.EncodingError,
                     _engine.base.CatastrophicBacktracking) as err:
@@ -681,11 +679,9 @@ class _MainWindow:
                                    'again.',
                                    path.name, path.parent)
             except _engine.base.Interruption:
-                _misc_logger.error(
-                        'Extraction interrupted by user.')
+                _misc_logger.error('Extraction interrupted by user.')
             else:
-                self._btn_main['extract'].config(text='Done',
-                                                 underline=-1)
+                self._btn_main['extract'].config(text='Done', underline=-1)
             finally:
                 self._status.set(self._status.get() + ' (Done)')
                 self._btn_main['copy log'].config(state='normal')
