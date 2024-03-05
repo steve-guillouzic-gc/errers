@@ -47,10 +47,10 @@ Classes (internal):
     _Status -- status bar
     _Busy -- context manager displaying a busy cursor in GUI
     _BackgroundTask -- background task running in another thread
+    _CheckCancelled -- exception raised when document review cancelled by user
     _InterProcessError -- exception raised on inter-process communication error
     _WordNotFoundError -- exception raised when MS Word not found
-    _ModalDialogError -- exception raised when a dialog box makes MS Word
-        unresponsive
+    _WordUnresponsiveError -- exception raised when MS Word is unresponsive
     _Language -- interface to language name from MS Word
 
 Functions (internal):
@@ -123,8 +123,10 @@ _UNEXPECTED = 'Unexpected error: please report to developer.'
 _UNEXPECTED_CONSOLE = ('Unexpected error: details written to console window. '
                        'Please report to developer.')
 _WORD_NOT_FOUND = 'Microsoft Word not found'
-_MODAL_DIALOG = ('A dialog box opened in Microsoft Word makes it '
-                 'unresponsive. Please close the dialog box and try again.')
+_WORD_UNRESPONSIVE = ('Microsoft Word is not responding. The issue may be due '
+                      'to an extension added to Microsoft Windows or Word. '
+                      'Please report details, which will be written to log, '
+                      'to developer.')
 _CORRUPT_GEN_PY = ('Inter-process communication error: clearing cache to '
                    'resolve issue. Please restart application and try again.')
 _INVALID_INPUT_FILE = 'Invalid input file'
@@ -748,6 +750,8 @@ class _MainWindow:
             q_detected -- Queue object for detected languages
             q_selected -- Queue object for selected language variants
         """
+        # pylint: disable=broad-except
+        # Reason: exception re-raised
         constants = win32com.client.constants
         pywintypes = win32com.client.pywintypes
         # Initialize COM libraries for this thread.
@@ -757,29 +761,31 @@ class _MainWindow:
         except AttributeError as err:
             raise _InterProcessError from err
         try:
-            word = _dispatch('Word.Application')
+            word = _dispatch('Word.Application', new_instance=True)
         except AttributeError as err:
             raise _InterProcessError from err
         except pywintypes.com_error as err:
             raise _WordNotFoundError from err
-        # Product language variant
-        word_lang_id = word.International(constants.wdProductLanguageID)
-        word_lang_variant \
-            = _Language(word.Languages(word_lang_id).NameLocal).variant
-        # Dictionary languages known to Word
-        dic_names = defaultdict(list)
-        for dic_lang in word.Languages:
-            lang = _Language(dic_lang.NameLocal)
-            if lang.base:
-                dic_names[lang.base].append(lang.full)
-        # Check for dialog boxes that would block document from opening.
-        windows = word.Windows
-        if (windows.Count and not win32gui.IsWindowEnabled(windows(1).Hwnd)):
-            raise _ModalDialogError()
         try:
-            # Load document and detect languages.
+            # Product language variant
+            word_lang_id = word.International(constants.wdProductLanguageID)
+            word_lang_variant \
+                = _Language(word.Languages(word_lang_id).NameLocal).variant
+            # Dictionary languages known to Word
+            dic_names = defaultdict(list)
+            for dic_lang in word.Languages:
+                lang = _Language(dic_lang.NameLocal)
+                if lang.base:
+                    dic_names[lang.base].append(lang.full)
+            # Load document.
             doc = word.Documents.Open(str(self._outname.resolve()),
                                       Visible=False)
+        except pywintypes.com_error as err:
+            raise _WordUnresponsiveError() from err
+        except Exception:
+            word.Quit()
+        try:
+            # Detect languages.
             doc.DetectLanguage()
             doc_lang_ids = {para.Range.LanguageID for para in doc.Paragraphs}
             doc_langs = {word.Languages(lang_id).NameLocal
@@ -802,31 +808,35 @@ class _MainWindow:
             q_detected.put(menu_langs)
             # Wait for selection of language variants.
             lang_mapping = q_selected.get()
-            if lang_mapping is not None:  # None means "cancel check".
-                # Apply selected language variants.
-                id_mapping = {word.Languages(detected).ID:
-                              word.Languages(selected).ID
-                              for detected, selected in lang_mapping}
-                id_mapping[constants.wdUndefined] = constants.wdUndefined
-                for para in doc.Paragraphs:
-                    para.Range.LanguageID = id_mapping[para.Range.LanguageID]
-                # Show document, reset status bar, and launch review.
-                doc.Windows(1).Visible = True
-                shell.AppActivate(doc)
-                word.StatusBar = False
-                try:
-                    # Try modern Editor sidebar first.
-                    mso = "WritingAssistanceCheckDocument"
-                    doc.CommandBars.ExecuteMso(mso)
-                except pywintypes.com_error:
-                    # Use old spelling and grammar checker as backup.
-                    doc.CheckGrammar()
-        finally:
+            if lang_mapping is None:
+                # None means "cancel check".
+                raise _CheckCancelled()
+            # Apply selected language variants.
+            id_mapping = {word.Languages(detected).ID:
+                          word.Languages(selected).ID
+                          for detected, selected in lang_mapping}
+            id_mapping[constants.wdUndefined] = constants.wdUndefined
+            for para in doc.Paragraphs:
+                para.Range.LanguageID = id_mapping[para.Range.LanguageID]
+            # Show document, reset status bar, and launch review.
+            doc.Windows(1).Visible = True
+            shell.AppActivate(doc)
+            word.StatusBar = False
+            try:
+                # Try modern Editor sidebar first.
+                mso = "WritingAssistanceCheckDocument"
+                doc.CommandBars.ExecuteMso(mso)
+            except pywintypes.com_error:
+                # Use old spelling and grammar checker as backup.
+                doc.CheckGrammar()
+        except pywintypes.com_error as err:
+            raise _WordUnresponsiveError() from err
+        except Exception:
             # On exception or cancellation: close document.
             if not doc.Windows(1).Visible:
                 doc.Close(SaveChanges=constants.wdDoNotSaveChanges)
-                if not word.Documents:
-                    word.Quit()
+                word.Quit()
+            raise
 
     def wait_for_languages(self, q_detected, q_selected):
         """Open language selection window once detected languages are known.
@@ -864,9 +874,13 @@ class _MainWindow:
         """
         try:
             future.result()
+        except _CheckCancelled:
+            pass
         except (_InterProcessError, _WordNotFoundError,
-                _ModalDialogError) as err:
+                _WordUnresponsiveError) as err:
             _show_error(root=self.root, parent=self.root, message=str(err))
+            if isinstance(err, _WordUnresponsiveError):
+                raise
 
     def on_delete(self):
         """Clean-up on window closure."""
@@ -2548,6 +2562,10 @@ class _BackgroundTask:
             _misc_logger.exception(_UNEXPECTED)
 
 
+class _CheckCancelled(Exception):
+    """Exception raised when document review is cancelled by user."""
+
+
 class _InterProcessError(Exception):
     """Exception raised on inter-process communication error
 
@@ -2572,7 +2590,7 @@ class _WordNotFoundError(Exception):
         super().__init__(_WORD_NOT_FOUND)
 
 
-class _ModalDialogError(Exception):
+class _WordUnresponsiveError(Exception):
     """Exceptions raised when Word is unresponsive due to an open dialog box.
 
     Methods:
@@ -2580,7 +2598,7 @@ class _ModalDialogError(Exception):
     """
 
     def __init__(self):
-        super().__init__(_MODAL_DIALOG)
+        super().__init__(_WORD_UNRESPONSIVE)
 
 
 class _Language:
@@ -2718,17 +2736,20 @@ def _set_icon(root):
     root.iconphoto(False, photo)
 
 
-def _dispatch(prog_id):
+def _dispatch(prog_id, new_instance=False):
     """Return COM object with early-binding, clearing cache if needed.
 
     Argument:
         prog_id -- programmatic identifier of object
+        new_instance -- whether to create a new instance if one already exists
 
     Returns:
         COM object
     """
     gencache = win32com.client.gencache
     try:
+        if new_instance:
+            prog_id = win32com.client.DispatchEx(prog_id)
         com_object = gencache.EnsureDispatch(prog_id)
     except AttributeError:
         # Delete gen_py cache generated by makepy, and reraise exception.
