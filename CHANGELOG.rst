@@ -16,6 +16,8 @@ Fixed
 -----
 - Fix bug in \\url rule (forbid closing bracket as opening delimiter).
 - Fix bug, introduced in version 3.2, that crashed GUI in Python 3.6.
+- In GUI mode, log to file until GUI is reset to ensure more exceptions are
+  captured -- especially communication errors with Word on Windows.
 - On Windows, eliminate some opportunities of communication errors with Word by
   forcing the launch of a new Word instance even if one is already running.
 - On Linux, fix bug in grouping of application windows in some desktop

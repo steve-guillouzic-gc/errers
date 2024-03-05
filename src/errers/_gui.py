@@ -403,6 +403,8 @@ class _MainWindow:
             if 'win32com.client' in sys.modules:
                 self._btn_main['check'].config(state='disabled')
             self.log.reset()
+            # Stop logging to file.
+            _app.set_log_stream(self.log)
         except Exception:
             _misc_logger.exception(_UNEXPECTED)
 
@@ -691,7 +693,6 @@ class _MainWindow:
                 self._inpath.unlock()
                 self._outpattern.unlock()
                 self._opt_list.unlock()
-                _app.set_log_stream(self.log)
         except Exception:
             _misc_logger.exception(_UNEXPECTED)
         finally:
