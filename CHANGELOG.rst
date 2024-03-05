@@ -16,6 +16,8 @@ Fixed
 -----
 - Fix bug in \\url rule (forbid closing bracket as opening delimiter).
 - Fix bug, introduced in version 3.2, that crashed GUI in Python 3.6.
+- On Windows, to avoid errors, prevent "Check" and "Reset" buttons from being
+  pressed while processing a prior activation of the "Check" button.
 - On Windows, capture communication errors with Word to log file.
 - On Windows, reduce opportunities of communication errors with Word by forcing
   launch of new Word instance even if one is running already.

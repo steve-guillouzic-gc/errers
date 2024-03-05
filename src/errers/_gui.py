@@ -741,6 +741,9 @@ class _MainWindow:
                                     'it and try again.'
                                     % (path.name, path.parent))
                 return
+            self._btn_main['check'].config(text='Checking', state='disabled',
+                                           underline=-1)
+            self._btn_main['reset'].config(state='disabled')
             q_detected = queue.Queue()
             q_selected = queue.Queue()
             _BackgroundTask(self.root, 'document_review',
@@ -881,6 +884,9 @@ class _MainWindow:
             future -- execution of grammar check
         """
         try:
+            self._btn_main['check'].config(text='Check', state='normal',
+                                           underline=4)
+            self._btn_main['reset'].config(state='normal')
             future.result()
         except _CheckCancelled:
             pass
