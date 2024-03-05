@@ -733,6 +733,17 @@ class _MainWindow:
         # pylint: disable=broad-except
         # Reason: exception logged
         try:
+            try:
+                with open(self._outname.resolve(), 'a'):
+                    pass
+            except PermissionError:
+                path = self._outname.resolve()
+                _show_error(root=self.root, parent=self.root,
+                            message='Cannot open %s in %s. It may be open in '
+                                    'another application. If so, please close '
+                                    'it and try again.'
+                                    % (path.name, path.parent))
+                return
             q_detected = queue.Queue()
             q_selected = queue.Queue()
             _BackgroundTask(self.root, 'document_review',
