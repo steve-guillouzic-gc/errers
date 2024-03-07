@@ -19,8 +19,7 @@ The following elements are internal elements of the module.
 Constants: text
     _UNEXPECTED, _UNEXPECTED_MESSAGE, _UNEXPECTED_DETAIL, _WORD_NOT_FOUND,
     _CORRUPT_GEN_PY, _INVALID_INPUT_FILE, _INVALID_OUTPUT_FILE,
-    _FILENAME_REQUIRED, _DESCRIPTION, _MANUAL, _FEEDBACK, _ALTERNATE, _CONTACT,
-    _ISSUES, _ISSUES_URL, _CONTACT, _CONTACT_URL, _NOTE_COPY,
+    _FILENAME_REQUIRED, _DESCRIPTION, _NOTE_URL, NOTE_COPY,
     _CLICK_INPUT_FILE, _DEBUGGING, _FILTERED, _MACOS14, _LANGUAGE_VARIANTS
 
 Constants: logging
@@ -134,18 +133,17 @@ _INVALID_OUTPUT_FILE = 'Pattern required for name of output file'
 _FILENAME_REQUIRED = 'Input file name required'
 _DESCRIPTION = [
     textwrap.dedent(f"""\
-        The {errers.SHORTNAME} acronym stands for {errers.LONGNAME}. The tool
-        extracts text from LaTeX files so as to reduce false positives when
+        {errers.SHORTNAME} stands for {errers.LONGNAME}. The tool
+        extracts text from LaTeX files to reduce false positives when
         checking grammar and spelling with Microsoft Word or other software.
         Extraction is performed through application of substitution rules based
         on regular expressions."""),
     textwrap.dedent(f"""\
         Current rules cover common LaTeX commands, and additional rules are
         created automatically for those defined in a document. When needed,
-        custom rules can be defined manually in the document itself or, when
-        {errers.SHORTNAME} is installed as Python package rather than
-        standalone application, in a local.py file placed in the rules
-        sub-directory of its installation folder."""),
+        custom rules can be defined manually in the document itself or in a
+        local.py file placed in the rules sub-directory of its installation
+        folder."""),
     textwrap.dedent(f"""\
         Keyboard shortcuts are available for buttons, checkboxes, and text
         fields. For most controls, the shortcut is the {MOD_KEY} key combined
@@ -155,17 +153,18 @@ _DESCRIPTION = [
         while the escape key can be used for "No" and "Cancel". Finally, the
         tab key cycles through controls, and the space bar toggles checkboxes
         and activates buttons."""),
-    "More information in user manual:"
+    'More information at Python packaging index and in user manual:',
+    ('https://pypi.org/project/errers',),
+    ('https://cradpdf.drdc-rddc.gc.ca/PDFS/unc459/p813656_A1b.pdf',),
+    'Questions, comments, and suggestions:',
+    ('https://github.com/steve-guillouzic-gc/errers/issues',
+     'github.com/steve-guillouzic-gc/errers/issues'),
+    'For those without a GitHub account:',
+    ('mailto:steve.guillouzic@forces.gc.ca?Subject=%s'
+     % urllib.parse.quote(errers.SHORTNAME + ' ' + errers.__version__),
+      'steve.guillouzic@forces.gc.ca'),
+    _NOTE_URL
 ]
-_MANUAL = 'https://cradpdf.drdc-rddc.gc.ca/PDFS/unc459/p813656_A1b.pdf'
-_FEEDBACK = 'Questions, comments, and suggestions:'
-_ALTERNATE = 'For those without a GitHub account:'
-_ISSUES = 'github.com/steve-guillouzic-gc/errers/issues'
-_ISSUES_URL = 'https://github.com/steve-guillouzic-gc/errers/issues'
-_CONTACT = 'steve.guillouzic@forces.gc.ca'
-_CONTACT_URL = ('mailto:steve.guillouzic@forces.gc.ca?Subject=%s'
-                % urllib.parse.quote(errers.SHORTNAME + ' '
-                                     + errers.__version__))
 _NOTE_COPY = textwrap.dedent(f"""\
     Note: copied text remains available for pasting until
     {errers.SHORTNAME} is closed.""")
@@ -954,13 +953,10 @@ class _HelpWindow(tk.Toplevel):
         _Spacer(description)
         description.grid(row=0, column=0, sticky='news')
         for desc in _DESCRIPTION:
-            _Description(description, 2, width, desc)
-        _Hyperlink(description, _MANUAL)
-        _Description(description, 2, width, _FEEDBACK)
-        _Hyperlink(description, _ISSUES_URL, _ISSUES)
-        _Description(description, 2, width, _ALTERNATE)
-        _Hyperlink(description, _CONTACT_URL, _CONTACT)
-        _Description(description, 2, width, _NOTE_URL)
+            if isinstance(desc, tuple):
+                _Hyperlink(description, *desc)
+            else:
+                _Description(description, 2, width, desc)
         buttons = [('ok', 'Ok', 0, self.destroy, 'normal')]
         _ButtonRow(description, buttons)
         # Keyboard shortcuts
