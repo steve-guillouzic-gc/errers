@@ -667,9 +667,11 @@ class _MainWindow:
             except (_engine.extractor.EncodingError,
                     _engine.base.CatastrophicBacktracking) as err:
                 _misc_logger.error(err)
+                status = 'Error'
             except _engine.base.RegularExpressionError:
                 _misc_logger.error('Extraction interrupted by '
                                    'regular expression error.')
+                status = 'Error'
             except PermissionError as err:
                 path = Path(err.filename).resolve()
                 _misc_logger.error('Cannot write to %s in %s. It may '
@@ -677,12 +679,15 @@ class _MainWindow:
                                    'If so, please close it and try '
                                    'again.',
                                    path.name, path.parent)
+                status = 'Error'
             except _engine.base.Interruption:
                 _misc_logger.error('Extraction interrupted by user.')
+                status = 'Interrupted'
             else:
                 self._btn_main['extract'].config(text='Done', underline=-1)
+                status = 'Done'
             finally:
-                self._status.set(self._status.get() + ' (Done)')
+                self._status.set(self._status.get() + f' ({status})')
                 self._btn_main['copy log'].config(state='normal')
                 self._btn_main['reset'].config(state='normal')
                 self._inpath.unlock()

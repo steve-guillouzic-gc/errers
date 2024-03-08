@@ -14,6 +14,8 @@ Unreleased
 
 Fixed
 -----
+- In status bar, write "Error" or "Interrupted" rather than "Done" when
+  extraction is not completed successfully.
 - Refer to project page at Python packaging index in help window.
 
 3.2.1, 2024-03-06
