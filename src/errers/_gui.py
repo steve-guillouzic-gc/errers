@@ -799,6 +799,7 @@ class _MainWindow:
             raise _WordUnresponsiveError() from err
         except Exception:
             word.Quit()
+            raise
         try:
             # Detect languages.
             doc.DetectLanguage()

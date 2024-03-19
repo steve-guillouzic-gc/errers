@@ -14,6 +14,8 @@ Unreleased
 
 Fixed
 -----
+- In Windows, report some runtime exceptions that were silently ignored when
+  launching Word.
 - In status bar, write "Error" or "Interrupted" rather than "Done" when
   extraction is not completed successfully.
 - Refer to project page at Python packaging index in help window.
